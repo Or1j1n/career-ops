@@ -7,12 +7,16 @@ export function getPlaywrightConcurrency(value = 2) {
 }
 
 export async function loadCustomAdapter(adapterName) {
+  if (!adapterName) {
+    throw new Error('Missing scan_adapter for playwright_custom target');
+  }
+
   try {
-    const module = await import(new URL(`../adapters/${adapterName}.mjs`, import.meta.url));
-    if (typeof module.scan !== 'function') {
+    const mod = await import(new URL(`../adapters/${adapterName}.mjs`, import.meta.url));
+    if (typeof mod.scan !== 'function') {
       throw new Error(`Adapter "${adapterName}" must export scan(page, company)`);
     }
-    return module;
+    return mod.scan;
   } catch (error) {
     throw new Error(`Failed to load adapter "${adapterName}": ${error.message}`);
   }
@@ -82,8 +86,8 @@ export async function runPlaywrightTarget(browser, company) {
 
   try {
     if (company.scan_method === 'playwright_custom') {
-      const adapter = await loadCustomAdapter(company.scan_adapter);
-      return await adapter.scan(page, company);
+      const scan = await loadCustomAdapter(company.scan_adapter);
+      return await scan(page, company);
     }
 
     return await scanWithPlaywrightGeneric(page, company);
@@ -92,13 +96,13 @@ export async function runPlaywrightTarget(browser, company) {
   }
 }
 
-export function applyScanWrites({ offers, dryRun, writePipeline, writeHistory }) {
+export async function applyScanWrites({ offers, dryRun, writePipeline, writeHistory }) {
   if (dryRun || offers.length === 0) {
     return;
   }
 
-  writePipeline(offers);
-  writeHistory(offers);
+  await writePipeline(offers);
+  await writeHistory(offers);
 }
 
 export async function withBrowser(fn) {

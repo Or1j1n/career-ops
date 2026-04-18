@@ -249,7 +249,7 @@ async function main() {
     }
 
     if (resolvedMethod.type === 'deferred' && resolvedMethod.explicit) {
-      console.log(`[SCAN] ${company.name}: ${resolvedMethod.method} configured but deferred until Task 2`);
+      console.log(`[SCAN] ${company.name}: ${resolvedMethod.method} configured but deferred`);
     }
     deferredCompanies.push(company);
   }
@@ -356,7 +356,7 @@ async function main() {
   }
 
   // 5. Write results
-  applyScanWrites({
+  await applyScanWrites({
     offers: newOffers,
     dryRun,
     writePipeline: appendToPipeline,
