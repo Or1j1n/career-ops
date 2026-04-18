@@ -217,6 +217,46 @@ test('loadCustomAdapter rejects clearly when scan_adapter is missing', async () 
   );
 });
 
+test('custom adapters load for big tech priority companies', async () => {
+  const adapters = await Promise.all([
+    loadCustomAdapter('microsoft'),
+    loadCustomAdapter('aws'),
+    loadCustomAdapter('google-cloud'),
+    loadCustomAdapter('salesforce'),
+    loadCustomAdapter('meta'),
+  ]);
+
+  for (const adapter of adapters) {
+    assert.equal(typeof adapter, 'function');
+  }
+});
+
+test('portals.yml defines a strict IDF location filter and V1 companies', () => {
+  const config = loadScanConfig('portals.yml');
+
+  assert.equal(Array.isArray(config.location_filter), true);
+  assert.equal(config.location_filter.includes('paris'), true);
+  assert.equal(config.location_filter.includes('hauts-de-seine'), true);
+
+  const companyNames = new Set(
+    (config.tracked_companies || []).map((company) => company.name),
+  );
+
+  for (const name of [
+    'OpenAI (Paris)',
+    'Microsoft (Paris)',
+    'AWS (Amazon Paris)',
+    'Google Cloud (Paris)',
+    'Salesforce (Paris)',
+    'Meta (Paris)',
+    'Scaleway',
+    'S3NS',
+    'Illuin',
+  ]) {
+    assert.equal(companyNames.has(name), true, `Missing tracked company: ${name}`);
+  }
+});
+
 test('applyScanWrites skips writes in dry-run mode', async () => {
   let pipelineCalls = 0;
   let historyCalls = 0;

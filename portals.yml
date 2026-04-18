@@ -166,9 +166,8 @@ tracked_companies:
   # -- US AI Giants with Paris Offices --
 
   - name: OpenAI (Paris)
-    careers_url: https://openai.com/careers
-    scan_method: websearch
-    scan_query: 'site:openai.com/careers "Paris" "Solutions" OR "Forward Deployed" OR "Engineer"'
+    careers_url: https://openai.com/careers/search
+    scan_method: playwright_generic
     enabled: true
 
   - name: Anthropic (Paris)
@@ -194,36 +193,46 @@ tracked_companies:
   # -- Big Tech with Paris AI Hubs --
 
   - name: Microsoft (Paris)
-    careers_url: https://careers.microsoft.com/
-    scan_method: websearch
-    scan_query: 'site:careers.microsoft.com "Paris" "AI" "Solutions Architect" OR "Copilot" OR "Azure OpenAI"'
+    careers_url: https://careers.microsoft.com/v2/global/en/locations/paris.html
+    scan_method: playwright_custom
+    scan_adapter: microsoft
     notes: "Match parfait avec votre passé de Regional Director."
     enabled: true
 
   - name: AWS (Amazon Paris)
-    careers_url: https://www.amazon.jobs/
-    scan_method: websearch
-    scan_query: 'site:amazon.jobs "Paris" "Generative AI" OR "Bedrock" "Solutions Architect" OR "Specialist"'
+    careers_url: https://www.amazon.jobs/fr/location/clichy-france
+    scan_method: playwright_custom
+    scan_adapter: aws
     enabled: true
 
   - name: Google Cloud (Paris)
     careers_url: https://www.google.com/about/careers/applications/jobs/results
-    scan_method: websearch
-    scan_query: 'site:www.google.com/about/careers "Paris" "Solutions Architect" AI OR "Vertex AI"'
+    scan_method: playwright_custom
+    scan_adapter: google-cloud
     enabled: true
 
   - name: Salesforce (Paris)
-    careers_url: https://careers.salesforce.com
-    scan_method: websearch
-    scan_query: 'site:careers.salesforce.com "Paris" "Forward Deployed" OR "Agentforce" OR "Solutions"'
+    careers_url: https://careers.salesforce.com/fr/
+    scan_method: playwright_custom
+    scan_adapter: salesforce
     notes: "Gros focus sur Agentforce à Paris."
     enabled: true
 
   - name: Meta (Paris)
     careers_url: https://www.metacareers.com/jobs
-    scan_method: websearch
-    scan_query: 'site:www.metacareers.com "Paris" "AI" OR "Research" OR "Engineer" OR "Solutions" OR "Partner Engineering"'
+    scan_method: playwright_custom
+    scan_adapter: meta
     notes: "FAIR (Recherche) + Partner Engineering (Déploiement Llama)."
+    enabled: true
+
+  - name: S3NS
+    careers_url: https://www.s3ns.io/nous-rejoindre
+    scan_method: playwright_generic
+    enabled: true
+
+  - name: Illuin
+    careers_url: https://www.welcometothejungle.com/fr/companies/illuin-tech/jobs
+    scan_method: playwright_generic
     enabled: true
 
   # -- French Enterprise AI (Strategic/Regulated) --
