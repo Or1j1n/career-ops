@@ -16,8 +16,8 @@
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
-import yaml from 'js-yaml';
-const parseYaml = yaml.load;
+import { loadScanConfig, buildTitleFilter, buildLocationFilter, resolveScanMethod } from './scan-lib/config.mjs';
+import { detectApi } from './scan-lib/api.mjs';
 
 // ── Config ──────────────────────────────────────────────────────────
 
@@ -31,46 +31,6 @@ mkdirSync('data', { recursive: true });
 
 const CONCURRENCY = 10;
 const FETCH_TIMEOUT_MS = 10_000;
-
-// ── API detection ───────────────────────────────────────────────────
-
-function detectApi(company) {
-  // Greenhouse: explicit api field
-  if (company.api && company.api.includes('greenhouse')) {
-    return { type: 'greenhouse', url: company.api };
-  }
-
-  const url = company.careers_url || '';
-
-  // Ashby
-  const ashbyMatch = url.match(/jobs\.ashbyhq\.com\/([^/?#]+)/);
-  if (ashbyMatch) {
-    return {
-      type: 'ashby',
-      url: `https://api.ashbyhq.com/posting-api/job-board/${ashbyMatch[1]}?includeCompensation=true`,
-    };
-  }
-
-  // Lever
-  const leverMatch = url.match(/jobs\.lever\.co\/([^/?#]+)/);
-  if (leverMatch) {
-    return {
-      type: 'lever',
-      url: `https://api.lever.co/v0/postings/${leverMatch[1]}`,
-    };
-  }
-
-  // Greenhouse EU boards
-  const ghEuMatch = url.match(/job-boards(?:\.eu)?\.greenhouse\.io\/([^/?#]+)/);
-  if (ghEuMatch && !company.api) {
-    return {
-      type: 'greenhouse',
-      url: `https://boards-api.greenhouse.io/v1/boards/${ghEuMatch[1]}/jobs`,
-    };
-  }
-
-  return null;
-}
 
 // ── API parsers ─────────────────────────────────────────────────────
 
@@ -118,31 +78,6 @@ async function fetchJson(url) {
   } finally {
     clearTimeout(timer);
   }
-}
-
-// ── Title filter ────────────────────────────────────────────────────
-
-function buildTitleFilter(titleFilter) {
-  const positive = (titleFilter?.positive || []).map(k => k.toLowerCase());
-  const negative = (titleFilter?.negative || []).map(k => k.toLowerCase());
-
-  return (title) => {
-    const lower = title.toLowerCase();
-    const hasPositive = positive.length === 0 || positive.some(k => lower.includes(k));
-    const hasNegative = negative.some(k => lower.includes(k));
-    return hasPositive && !hasNegative;
-  };
-}
-
-// ── Location filter ─────────────────────────────────────────────────
-
-function buildLocationFilter(allowedLocations) {
-  const allowed = (allowedLocations || ['paris', 'france', 'emea', 'remote', 'idf', 'ile-de-france']).map(k => k.toLowerCase());
-  return (location) => {
-    if (!location || location.trim() === '') return true;
-    const lower = location.toLowerCase();
-    return allowed.some(k => lower.includes(k));
-  };
 }
 
 // ── Dedup ───────────────────────────────────────────────────────────
@@ -267,21 +202,25 @@ async function main() {
   const filterCompany = companyFlag !== -1 ? args[companyFlag + 1]?.toLowerCase() : null;
 
   // 1. Read portals.yml
-  if (!existsSync(PORTALS_PATH)) {
-    console.error('Error: portals.yml not found. Run onboarding first.');
-    process.exit(1);
-  }
-
-  const config = parseYaml(readFileSync(PORTALS_PATH, 'utf-8'));
+  const config = loadScanConfig(PORTALS_PATH);
   const companies = config.tracked_companies || [];
   const titleFilter = buildTitleFilter(config.title_filter);
   const locationFilter = buildLocationFilter(config.location_filter);
 
-  // 2. Filter to enabled companies with detectable APIs
+  // 2. Filter to enabled companies and resolve scan methods
   const targets = companies
     .filter(c => c.enabled !== false)
     .filter(c => !filterCompany || c.name.toLowerCase().includes(filterCompany))
-    .map(c => ({ ...c, _api: detectApi(c) }))
+    .map(c => {
+      const resolvedMethod = resolveScanMethod(c);
+      if (resolvedMethod.type === 'playwright_generic' && resolvedMethod.implicit) {
+        console.log(`[SCAN] ${c.name}: scanning via playwright_generic (no method declared, no ATS detected)`);
+      }
+      return {
+        ...c,
+        _api: resolvedMethod.type === 'api' ? resolvedMethod.api : null,
+      };
+    })
     .filter(c => c._api !== null);
 
   const skippedCount = companies.filter(c => c.enabled !== false).length - targets.length;
