@@ -50,7 +50,15 @@ node scan.mjs
 
 Il absorbe les cas d'usage aujourd'hui éparpillés entre le scan API existant et le prototype `scan-portals.mjs`.
 
-`scan-portals.mjs` devient soit obsolète, soit une source temporaire d'extraction à intégrer, mais il ne doit plus représenter un second flux officiel.
+`scan-portals.mjs` est explicitement déprécié puis supprimé.
+
+Raison :
+
+- le prototype contient des chemins hardcodés incompatibles avec le flux officiel
+- il contient déjà au moins un bug de reporting sur le total des jobs trouvés
+- il ne doit pas devenir une seconde implémentation concurrente du scan
+
+Toute logique Playwright utile doit être réécrite proprement dans `scan.mjs` ou dans des modules dédiés, sans copie directe du prototype.
 
 ### 3. Méthodes de scan explicites par société
 
@@ -77,6 +85,43 @@ Exemple de direction de structure :
   scan_adapter: microsoft
   enabled: true
 ```
+
+### 3.1 Contrat des adapters `playwright_custom`
+
+Les adapters custom doivent avoir un contrat explicite dès la spec.
+
+Convention de chemin :
+
+```text
+adapters/{scan_adapter}.mjs
+```
+
+Export attendu :
+
+```js
+export async function scan(page, company) {
+  return [
+    {
+      title,
+      url,
+      company,
+      location,
+    },
+  ];
+}
+```
+
+Règles :
+
+- `page` est une page Playwright déjà créée par `scan.mjs`
+- `company` est l'objet société issu de `portals.yml`
+- l'adapter retourne une liste d'objets normalisables sans écrire de fichier
+- `scan.mjs` ajoute ensuite `source` et applique filtres et déduplication
+
+Chargement :
+
+- `scan.mjs` charge dynamiquement l'adapter via `import()`
+- si `scan_adapter` est manquant ou introuvable pour une société `playwright_custom`, la société est marquée en erreur mais le scan global continue
 
 La logique reste tolérante :
 
@@ -115,6 +160,16 @@ Un filtre explicite doit être ajouté à `portals.yml`, couvrant :
 - les huit départements : `Paris`, `Seine-et-Marne`, `Yvelines`, `Essonne`, `Hauts-de-Seine`, `Seine-Saint-Denis`, `Val-de-Marne`, `Val-d'Oise`
 - les appellations opérationnelles courantes comme `La Défense`
 
+Le comportement de fallback doit être strictement défini.
+
+Le code actuel contient un fallback permissif incluant `france`, `emea` et `remote`. Ce comportement est incompatible avec un mode IDF strict.
+
+Décision retenue :
+
+- `scan.mjs` refuse de démarrer si `location_filter` est absent ou vide dans `portals.yml`
+- il n'existe plus de fallback permissif implicite
+- si un fallback reste nécessaire pour la robustesse du code, il doit être limité aux seuls libellés IDF et produire un avertissement explicite
+
 Le filtre doit accepter les libellés IDF usuels et rejeter les localisations non-IDF ou trop vagues comme :
 
 - `Lyon`
@@ -141,6 +196,12 @@ Ces sociétés restent dans le socle stable du scan via API ou ATS détectable :
 - `Anthropic (Paris)`
 - `Cohere (Paris)`
 - `Palantir (Paris)`
+
+Vérification effectuée avant plan :
+
+- chaque société du Groupe A est bien présente dans `portals.yml`
+- chaque société du Groupe A est bien détectable aujourd'hui par `detectApi()`
+- aucune société du Groupe A n'est silencieusement skippée par le mécanisme actuel de détection API
 
 #### Groupe B, prioritaires must-check à couvrir dans v1
 
@@ -218,6 +279,39 @@ Les adapters Playwright custom doivent rester petits et ciblés. Il faut éviter
 - normalisation
 - filtres
 - persistance
+
+### Concurrence
+
+La concurrence ne doit pas être identique entre les appels API et les scans Playwright.
+
+Décision retenue :
+
+- les appels API peuvent conserver une concurrence haute
+- les scans Playwright utilisent une concurrence dédiée `PLAYWRIGHT_CONCURRENCY`
+- la valeur cible de `PLAYWRIGHT_CONCURRENCY` doit être faible, recommandée à `2` avec plafond pratique à `3`
+
+Cela limite :
+
+- la pression sur Chromium
+- les timeouts sur des pages lourdes
+- les comportements non déterministes sur des sites fortement dynamiques
+
+### `--dry-run`
+
+Le mode `--dry-run` exécute réellement les méthodes de scan, y compris Playwright, mais n'écrit aucun fichier.
+
+Raison :
+
+- il doit permettre de valider l'extraction réelle
+- il doit aussi tester les adapters custom et le filtrage géographique
+- un `--dry-run` qui saute Playwright masquerait les erreurs d'implémentation sur les sociétés prioritaires
+
+En `--dry-run` :
+
+- le navigateur peut s'exécuter
+- les extractions sont réalisées
+- la déduplication et les filtres sont appliqués
+- aucune écriture n'a lieu dans `pipeline.md` ou `scan-history.tsv`
 
 ## Stratégie de tests
 
