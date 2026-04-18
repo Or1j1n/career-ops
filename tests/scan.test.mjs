@@ -125,26 +125,35 @@ test('resolveScanMethod falls back to implicit playwright_generic and detectApi 
   });
 
   assert.deepEqual(detectApi({
-    name: 'LeverCo',
-    careers_url: 'https://jobs.lever.co/leverco',
+    name: 'H Company',
+    careers_url: 'https://jobs.lever.co/h-company',
   }), {
     type: 'lever',
-    url: 'https://api.lever.co/v0/postings/leverco',
+    url: 'https://api.lever.co/v0/postings/h-company',
   });
 
   assert.deepEqual(detectApi({
-    name: 'AshbyCo',
-    careers_url: 'https://jobs.ashbyhq.com/ashbyco',
+    name: 'Dust',
+    careers_url: 'https://jobs.ashbyhq.com/dust',
   }), {
     type: 'ashby',
-    url: 'https://api.ashbyhq.com/posting-api/job-board/ashbyco?includeCompensation=true',
+    url: 'https://api.ashbyhq.com/posting-api/job-board/dust?includeCompensation=true',
   });
 
   assert.deepEqual(detectApi({
-    name: 'GreenhouseCo',
-    careers_url: 'https://job-boards.eu.greenhouse.io/greenhouseco',
+    name: 'Poolside',
+    careers_url: 'https://jobs.ashbyhq.com/poolside',
+  }), {
+    type: 'ashby',
+    url: 'https://api.ashbyhq.com/posting-api/job-board/poolside?includeCompensation=true',
+  });
+
+  assert.deepEqual(detectApi({
+    name: 'Shift Technology',
+    careers_url: 'https://job-boards.greenhouse.io/shifttechnology',
+    api: 'https://boards-api.greenhouse.io/v1/boards/shifttechnology/jobs',
   }), {
     type: 'greenhouse',
-    url: 'https://boards-api.greenhouse.io/v1/boards/greenhouseco/jobs',
+    url: 'https://boards-api.greenhouse.io/v1/boards/shifttechnology/jobs',
   });
 });
