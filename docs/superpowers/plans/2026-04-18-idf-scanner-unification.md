@@ -107,6 +107,13 @@ test('resolveScanMethod prefers explicit custom adapters and falls back to ATS d
   );
 });
 
+test('resolveScanMethod intentionally falls back to playwright_generic when no ATS or explicit method exists', () => {
+  assert.deepEqual(
+    resolveScanMethod({ careers_url: 'https://example.com/careers' }),
+    { type: 'playwright_generic', implicit: true }
+  );
+});
+
 test('detectApi still recognizes every Group A ATS board', () => {
   assert.equal(detectApi({ careers_url: 'https://jobs.lever.co/mistral' }).type, 'lever');
   assert.equal(detectApi({ careers_url: 'https://jobs.lever.co/h-company' }).type, 'lever');
@@ -197,7 +204,7 @@ export function resolveScanMethod(company) {
   const api = detectApi(company);
   if (api) return { type: 'api', api };
 
-  return { type: 'playwright_generic' };
+  return { type: 'playwright_generic', implicit: true };
 }
 ```
 
@@ -246,6 +253,14 @@ import { loadScanConfig, buildTitleFilter, buildLocationFilter, resolveScanMetho
 import { detectApi } from './scan-lib/api.mjs';
 ```
 
+This fallback to `playwright_generic` is intentional. It broadens coverage instead of silently skipping real company pages. The implementation in `scan.mjs` must log it explicitly:
+
+```js
+if (resolvedMethod.type === 'playwright_generic' && resolvedMethod.implicit) {
+  console.log(`[SCAN] ${company.name}: scanning via playwright_generic (no method declared, no ATS detected)`);
+}
+```
+
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run:
@@ -257,8 +272,8 @@ node --test tests/scan.test.mjs
 Expected:
 
 ```text
-# tests 4
-# pass 4
+# tests 5
+# pass 5
 # fail 0
 ```
 
@@ -301,6 +316,21 @@ test('applyScanWrites skips file writes in dry-run mode', async () => {
   await applyScanWrites({
     offers: [{ title: 'A', url: 'https://example.com', company: 'Example', location: 'Paris', source: 'test' }],
     dryRun: true,
+    writePipeline: async () => { pipelineWrites++; },
+    writeHistory: async () => { historyWrites++; },
+  });
+
+  assert.equal(pipelineWrites, 0);
+  assert.equal(historyWrites, 0);
+});
+
+test('applyScanWrites skips file writes when there are no offers', async () => {
+  let pipelineWrites = 0;
+  let historyWrites = 0;
+
+  await applyScanWrites({
+    offers: [],
+    dryRun: false,
     writePipeline: async () => { pipelineWrites++; },
     writeHistory: async () => { historyWrites++; },
   });
@@ -358,11 +388,31 @@ export async function scanWithPlaywrightGeneric(page, company) {
   await page.goto(company.careers_url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
   return page.locator('a').evaluateAll((links, companyName) => {
+    const locationSelectors = [
+      '[data-testid="location"]',
+      '[data-automation-id*="location"]',
+      '[class*="location"]',
+      '[aria-label*="location" i]',
+    ];
+
+    const extractLocation = (anchor) => {
+      const container = anchor.closest('article, li, div, tr, section');
+      if (!container) return '';
+
+      for (const selector of locationSelectors) {
+        const node = container.querySelector(selector);
+        const value = (node?.textContent || '').trim();
+        if (value) return value;
+      }
+
+      return '';
+    };
+
     return links
       .map((link) => {
         const href = link.getAttribute('href');
         const title = (link.textContent || '').trim();
-        const location = (link.closest('article, li, div')?.textContent || '').trim();
+        const location = extractLocation(link);
         if (!href || !title) return null;
         return {
           title,
@@ -411,7 +461,20 @@ const API_CONCURRENCY = 10;
 const PLAYWRIGHT_CONCURRENCY = 2;
 ```
 
-Modify the orchestration in `scan.mjs` so `--dry-run` still executes scanners but routes writes through `applyScanWrites(...)`.
+When collecting Playwright results in `scan.mjs`, stamp `source` explicitly before pushing into `newOffers` or writing `scan-history.tsv`:
+
+```js
+const rawOffers = await runPlaywrightTarget(browser, company);
+const offers = rawOffers.map((offer) => ({
+  ...offer,
+  source:
+    resolvedMethod.type === 'playwright_custom'
+      ? `playwright_custom:${resolvedMethod.adapter}`
+      : 'playwright_generic',
+}));
+```
+
+Modify the orchestration in `scan.mjs` so `--dry-run` still executes scanners but routes writes through `applyScanWrites(...)`. The generic path must fall back to `location: ''` when no precise selector matches; broad text blobs are intentionally not used because they make the strict IDF filter noisy.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -424,8 +487,8 @@ node --test tests/scan.test.mjs --test-name-pattern "playwright|dry-run|adapter"
 Expected:
 
 ```text
-# tests 3
-# pass 3
+# tests 4
+# pass 4
 # fail 0
 ```
 
@@ -509,6 +572,14 @@ or assertion failures for missing location_filter / missing S3NS / missing Illui
 
 - [ ] **Step 3: Implement the V1 adapters**
 
+Location extraction rule for adapters:
+
+- For pages already filtered to a Paris/France scope by their curated URL, return `location: 'Paris'` directly instead of scraping a noisy text blob.
+  This applies to `microsoft.mjs`, `aws.mjs`, and `salesforce.mjs` in this v1 plan.
+- For broad job indexes that are not already geographically narrowed, probe a small set of precise location selectors and fall back to `location: ''` when nothing reliable is found.
+  This applies to `google-cloud.mjs` and `meta.mjs`.
+- No adapter in this plan should use `link.closest(...).textContent` as a location source.
+
 Create `adapters/microsoft.mjs`:
 
 ```js
@@ -523,7 +594,7 @@ export async function scan(page, company) {
         title: (link.textContent || '').trim(),
         url: link.href,
         company: companyName,
-        location: (link.closest('div, li, article')?.textContent || '').trim(),
+        location: 'Paris',
       }))
       .filter(job => job.title);
   }, company.name);
@@ -542,7 +613,7 @@ export async function scan(page, company) {
       title: (link.textContent || '').trim(),
       url: link.href,
       company: companyName,
-      location: (link.closest('div, li, article')?.textContent || '').trim(),
+      location: 'Paris',
     })).filter(job => job.title);
   }, company.name);
 }
@@ -556,11 +627,31 @@ export async function scan(page, company) {
   await page.waitForLoadState('networkidle').catch(() => {});
 
   return page.locator('a[href*="/jobs/results/"]').evaluateAll((links, companyName) => {
+    const locationSelectors = [
+      '[data-testid="location"]',
+      '[data-automation-id*="location"]',
+      '[class*="location"]',
+      '[aria-label*="location" i]',
+    ];
+
+    const extractLocation = (anchor) => {
+      const container = anchor.closest('li, div, article, tr, section');
+      if (!container) return '';
+
+      for (const selector of locationSelectors) {
+        const node = container.querySelector(selector);
+        const value = (node?.textContent || '').trim();
+        if (value) return value;
+      }
+
+      return '';
+    };
+
     return links.map(link => ({
       title: (link.textContent || '').trim(),
       url: link.href,
       company: companyName,
-      location: (link.closest('li, div, article')?.textContent || '').trim(),
+      location: extractLocation(link),
     })).filter(job => job.title);
   }, company.name);
 }
@@ -578,7 +669,7 @@ export async function scan(page, company) {
       title: (link.textContent || '').trim(),
       url: link.href,
       company: companyName,
-      location: (link.closest('div, article, li')?.textContent || '').trim(),
+      location: 'Paris',
     })).filter(job => job.title);
   }, company.name);
 }
@@ -592,11 +683,31 @@ export async function scan(page, company) {
   await page.waitForLoadState('networkidle').catch(() => {});
 
   return page.locator('a[href*="/jobs/"]').evaluateAll((links, companyName) => {
+    const locationSelectors = [
+      '[data-testid="location"]',
+      '[data-automation-id*="location"]',
+      '[class*="location"]',
+      '[aria-label*="location" i]',
+    ];
+
+    const extractLocation = (anchor) => {
+      const container = anchor.closest('div, article, li, tr, section');
+      if (!container) return '';
+
+      for (const selector of locationSelectors) {
+        const node = container.querySelector(selector);
+        const value = (node?.textContent || '').trim();
+        if (value) return value;
+      }
+
+      return '';
+    };
+
     return links.map(link => ({
       title: (link.textContent || '').trim(),
       url: link.href,
       company: companyName,
-      location: (link.closest('div, article, li')?.textContent || '').trim(),
+      location: extractLocation(link),
     })).filter(job => job.title);
   }, company.name);
 }
@@ -736,7 +847,7 @@ Update `package.json` to add a dedicated script:
 }
 ```
 
-Update `test-all.mjs` to recurse into the new scanner directories:
+Replace the current flat `readdirSync(ROOT)` syntax scan in `test-all.mjs`; do not keep the old top-level-only pass alongside the recursive collector. The recursive collector becomes the single source of syntax discovery for scanner files:
 
 ```js
 function collectMjsFiles(dir) {
@@ -825,6 +936,7 @@ git commit -m "test: harden scanner verification and remove prototype"
   - `scan-portals.mjs` deletion: covered in Task 4.
   - Playwright concurrency and `--dry-run`: covered in Task 2.
   - Group A ATS detectability: covered in Task 1.
+  - Precise Playwright `location` extraction and `source` stamping: covered in Task 2 and Task 3.
 - Placeholder scan:
   - No placeholder markers or deferred implementation notes remain.
 - Type consistency:
