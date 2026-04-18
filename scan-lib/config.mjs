@@ -68,5 +68,9 @@ export function resolveScanMethod(company) {
     return { type: 'api', api };
   }
 
+  if (company.scan_method) {
+    return { type: 'deferred', method: company.scan_method, explicit: true };
+  }
+
   return { type: 'playwright_generic', implicit: true };
 }

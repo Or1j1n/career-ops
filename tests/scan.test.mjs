@@ -120,6 +120,20 @@ test('resolveScanMethod prefers explicit playwright_custom and ATS detection', (
   });
 });
 
+test('resolveScanMethod keeps explicit websearch deferred instead of implicit', () => {
+  const deferred = resolveScanMethod({
+    name: 'OpenAI',
+    scan_method: 'websearch',
+    scan_query: 'site:openai.com/careers "Paris"',
+  });
+
+  assert.deepEqual(deferred, {
+    type: 'deferred',
+    method: 'websearch',
+    explicit: true,
+  });
+});
+
 test('resolveScanMethod falls back to implicit playwright_generic and detectApi covers the explicit ATS examples from Task 1', () => {
   const implicit = resolveScanMethod({
     name: 'UnknownCo',

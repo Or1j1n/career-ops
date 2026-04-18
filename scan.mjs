@@ -226,9 +226,12 @@ async function main() {
 
     if (resolvedMethod.type === 'playwright_generic' && resolvedMethod.implicit) {
       console.log(`[SCAN] ${company.name}: scanning via playwright_generic (no method declared, no ATS detected)`);
+      console.log(`[SCAN] ${company.name}: non-API execution deferred until Task 2`);
+    } else if (resolvedMethod.type === 'deferred' && resolvedMethod.explicit) {
+      console.log(`[SCAN] ${company.name}: ${resolvedMethod.method} configured but deferred until Task 2`);
+    } else if (resolvedMethod.type === 'playwright_generic') {
+      console.log(`[SCAN] ${company.name}: scanning via playwright_generic`);
     }
-
-    console.log(`[SCAN] ${company.name}: non-API execution deferred until Task 2`);
     deferredCompanies.push(company);
   }
 
