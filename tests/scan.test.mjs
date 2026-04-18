@@ -282,6 +282,32 @@ test('applyScanWrites awaits async writers in order', async () => {
 });
 
 test('scanWithPlaywrightGeneric falls back to empty location when no precise selector matches', async () => {
+  const originalWindow = globalThis.window;
+  const fakeContainer = {
+    querySelector() {
+      return null;
+    },
+  };
+  const fakeAnchor = {
+    textContent: 'Platform Engineer',
+    getAttribute(name) {
+      if (name === 'href') return '/jobs/1';
+      if (name === 'aria-label') return null;
+      if (name === 'title') return null;
+      return null;
+    },
+    closest() {
+      return fakeContainer;
+    },
+    parentElement: fakeContainer,
+  };
+
+  globalThis.window = {
+    location: {
+      href: 'https://example.com/careers',
+    },
+  };
+
   const page = {
     gotoCalls: [],
     async goto(url, options) {
@@ -290,38 +316,35 @@ test('scanWithPlaywrightGeneric falls back to empty location when no precise sel
     locator(selector) {
       assert.equal(selector, 'a');
       return {
-        async evaluateAll() {
-          return [
-            {
-              title: 'Platform Engineer',
-              url: 'https://example.com/jobs/1',
-              company: '',
-              location: '',
-            },
-          ];
+        async evaluateAll(callback) {
+          return callback([fakeAnchor]);
         },
       };
     },
   };
 
-  const offers = await scanWithPlaywrightGeneric(page, {
-    name: 'Example',
-    careers_url: 'https://example.com/careers',
-  });
+  try {
+    const offers = await scanWithPlaywrightGeneric(page, {
+      name: 'Example',
+      careers_url: 'https://example.com/careers',
+    });
 
-  assert.deepEqual(page.gotoCalls, [{
-    url: 'https://example.com/careers',
-    options: {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    },
-  }]);
-  assert.deepEqual(offers, [{
-    title: 'Platform Engineer',
-    url: 'https://example.com/jobs/1',
-    company: 'Example',
-    location: '',
-  }]);
+    assert.deepEqual(page.gotoCalls, [{
+      url: 'https://example.com/careers',
+      options: {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      },
+    }]);
+    assert.deepEqual(offers, [{
+      title: 'Platform Engineer',
+      url: 'https://example.com/jobs/1',
+      company: 'Example',
+      location: '',
+    }]);
+  } finally {
+    globalThis.window = originalWindow;
+  }
 });
 
 test('runPlaywrightTarget generic path returns offers and closes the page', async () => {
