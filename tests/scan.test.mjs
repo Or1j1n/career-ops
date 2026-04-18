@@ -63,6 +63,13 @@ test('loadScanConfig and buildLocationFilter throw when location_filter is missi
   });
 });
 
+test('loadScanConfig accepts the example portals template', () => {
+  const config = loadScanConfig('templates/portals.example.yml');
+
+  assert.equal(Array.isArray(config.location_filter), true);
+  assert.ok(config.location_filter.length > 0);
+});
+
 test('buildLocationFilter accepts strict IDF labels and rejects broad fallback labels', () => {
   const isAllowed = buildLocationFilter([
     'Paris',
@@ -113,7 +120,7 @@ test('resolveScanMethod prefers explicit playwright_custom and ATS detection', (
   });
 });
 
-test('resolveScanMethod falls back to implicit playwright_generic and detectApi covers Group A ATS boards', () => {
+test('resolveScanMethod falls back to implicit playwright_generic and detectApi covers the explicit ATS examples from Task 1', () => {
   const implicit = resolveScanMethod({
     name: 'UnknownCo',
     careers_url: 'https://example.com/careers',

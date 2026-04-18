@@ -17,7 +17,6 @@
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
 import { loadScanConfig, buildTitleFilter, buildLocationFilter, resolveScanMethod } from './scan-lib/config.mjs';
-import { detectApi } from './scan-lib/api.mjs';
 
 // ── Config ──────────────────────────────────────────────────────────
 
@@ -208,24 +207,34 @@ async function main() {
   const locationFilter = buildLocationFilter(config.location_filter);
 
   // 2. Filter to enabled companies and resolve scan methods
-  const targets = companies
+  const selectedCompanies = companies
     .filter(c => c.enabled !== false)
-    .filter(c => !filterCompany || c.name.toLowerCase().includes(filterCompany))
-    .map(c => {
-      const resolvedMethod = resolveScanMethod(c);
-      if (resolvedMethod.type === 'playwright_generic' && resolvedMethod.implicit) {
-        console.log(`[SCAN] ${c.name}: scanning via playwright_generic (no method declared, no ATS detected)`);
-      }
-      return {
-        ...c,
-        _api: resolvedMethod.type === 'api' ? resolvedMethod.api : null,
-      };
-    })
-    .filter(c => c._api !== null);
+    .filter(c => !filterCompany || c.name.toLowerCase().includes(filterCompany));
 
-  const skippedCount = companies.filter(c => c.enabled !== false).length - targets.length;
+  const apiTargets = [];
+  const deferredCompanies = [];
 
-  console.log(`Scanning ${targets.length} companies via API (${skippedCount} skipped — no API detected)`);
+  for (const company of selectedCompanies) {
+    const resolvedMethod = resolveScanMethod(company);
+    if (resolvedMethod.type === 'api') {
+      apiTargets.push({
+        ...company,
+        _api: resolvedMethod.api,
+      });
+      continue;
+    }
+
+    if (resolvedMethod.type === 'playwright_generic' && resolvedMethod.implicit) {
+      console.log(`[SCAN] ${company.name}: scanning via playwright_generic (no method declared, no ATS detected)`);
+    }
+
+    console.log(`[SCAN] ${company.name}: non-API execution deferred until Task 2`);
+    deferredCompanies.push(company);
+  }
+
+  const targets = apiTargets;
+
+  console.log(`Scanning ${targets.length} API companies (${deferredCompanies.length} deferred for non-API execution)`);
   if (dryRun) console.log('(dry run — no files will be written)\n');
 
   // 3. Load dedup sets
@@ -287,7 +296,9 @@ async function main() {
   console.log(`\n${'━'.repeat(45)}`);
   console.log(`Portal Scan — ${date}`);
   console.log(`${'━'.repeat(45)}`);
-  console.log(`Companies scanned:     ${targets.length}`);
+  console.log(`Companies selected:    ${selectedCompanies.length}`);
+  console.log(`API companies scanned: ${targets.length}`);
+  console.log(`Non-API deferred:      ${deferredCompanies.length}`);
   console.log(`Total jobs found:      ${totalFound}`);
   console.log(`Filtered by title:     ${totalFiltered} removed`);
   console.log(`Duplicates:            ${totalDupes} skipped`);
