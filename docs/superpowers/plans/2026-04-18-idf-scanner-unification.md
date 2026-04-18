@@ -852,6 +852,7 @@ Replace the current flat `readdirSync(ROOT)` syntax scan in `test-all.mjs`; do n
 ```js
 function collectMjsFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    if (entry.name === 'node_modules') return [];
     const full = join(dir, entry.name);
     if (entry.isDirectory()) return collectMjsFiles(full);
     return entry.name.endsWith('.mjs') ? [full] : [];
