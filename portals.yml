@@ -1,0 +1,253 @@
+# Portal Scanner Configuration - PARIS / IDF FOCUS
+# Uniquement des entreprises avec présence physique en Île-de-France et CDI français.
+
+location_filter:
+  - "paris"
+  - "ile-de-france"
+  - "île-de-france"
+  - "idf"
+  - "grand paris"
+  - "greater paris"
+  - "paris area"
+  - "la défense"
+  - "la defense"
+  - "paris intramuros"
+  - "seine-et-marne"
+  - "yvelines"
+  - "essonne"
+  - "hauts-de-seine"
+  - "seine-saint-denis"
+  - "val-de-marne"
+  - "val-d'oise"
+
+title_filter:
+  positive:
+    # -- AI Deployment & Strategy --
+    - "AI Deployment"
+    - "AI Strategy"
+    - "AI Solutions"
+    - "Applied AI"
+    - "AI Architect"
+    - "AI Implementation"
+    - "AI Integration"
+    - "AI Delivery"
+    # -- Solutions & Architecture --
+    - "Solutions Architect"
+    - "Solutions Engineer"
+    - "Forward Deployed"
+    - "Deployed Engineer"
+    - "Customer Engineer"
+    - "Technical Account Manager"
+    - "Strategic TAM"
+    # -- Leadership & Product --
+    - "Head of AI"
+    - "AI Practice Lead"
+    - "Technical Deployment Lead"
+    - "Customer Success Lead"
+    # -- Core AI Tech --
+    - "LLM"
+    - "Generative AI"
+    - "GenAI"
+    - "Agentic"
+    - "RAG"
+    - "NLP"
+  negative:
+    - "Junior"
+    - "Intern"
+    - "Stage"
+    - "Alternance"
+    - ".NET" # Optionnel, mais vous semblez migrer vers Python/LLM
+    - "Java "
+    - "PHP"
+    - "Ruby"
+    - "Blockchain"
+    - "Crypto"
+  seniority_boost:
+    - "Senior"
+    - "Staff"
+    - "Principal"
+    - "Lead"
+    - "Head"
+    - "Director"
+
+search_queries:
+  - name: Paris AI Jobs — Solutions & Strategy
+    query: '"Solutions Architect" OR "AI Strategy" OR "Forward Deployed" AI Paris site:linkedin.com/jobs'
+    enabled: true
+
+  - name: Welcome to the Jungle — IA Paris
+    query: 'site:welcometothejungle.com "AI" OR "LLM" "Solutions" OR "Architect" Paris'
+    enabled: true
+
+  - name: Paris Startups — Ashby
+    query: 'site:jobs.ashbyhq.com "AI" OR "Solutions" Paris'
+    enabled: true
+
+  - name: Paris Startups — Greenhouse
+    query: 'site:boards.greenhouse.io "AI" OR "Solutions" Paris'
+    enabled: true
+
+tracked_companies:
+
+  # -- The Paris AI Core (Labs & Pure Players) --
+
+  - name: Mistral AI
+    careers_url: https://jobs.lever.co/mistral
+    notes: "Paris. Le champion européen."
+    enabled: true
+
+  - name: H (Holistic AI)
+    careers_url: https://jobs.lever.co/h-company
+    notes: "Paris. Agents d'action. 200M$ levés."
+    enabled: true
+
+  - name: Dust
+    careers_url: https://jobs.ashbyhq.com/dust
+    notes: "Paris. IA pour la productivité interne. Ex-OpenAI."
+    enabled: true
+
+  - name: LightOn
+    careers_url: https://www.welcometothejungle.com/fr/companies/lighton/jobs
+    notes: "Paris. LLM pour grandes entreprises et souveraineté."
+    enabled: true
+
+  - name: Poolside
+    careers_url: https://jobs.ashbyhq.com/poolside
+    notes: "Paris. IA pour le software engineering."
+    enabled: true
+
+  - name: Hugging Face
+    careers_url: https://apply.workable.com/hugging-face/
+    notes: "Paris/NY. Le centre de gravité de l'open source AI."
+    enabled: true
+
+  - name: Kyutai
+    careers_url: https://kyutai.org/
+    scan_method: websearch
+    scan_query: 'site:kyutai.org "jobs" OR "careers" OR "engineer"'
+    notes: "Paris. Lab d'IA open science (Moshi)."
+    enabled: true
+
+  # -- Vertical AI & Specialized (Paris Based) --
+
+  - name: Shift Technology
+    careers_url: https://job-boards.greenhouse.io/shifttechnology
+    api: https://boards-api.greenhouse.io/v1/boards/shifttechnology/jobs
+    notes: "Paris. IA pour l'assurance (fraude). Match parfait SQLI/Odigo."
+    enabled: true
+
+  - name: Alan
+    careers_url: https://job-boards.greenhouse.io/alan
+    api: https://boards-api.greenhouse.io/v1/boards/alan/jobs
+    notes: "Paris. Assurance santé avec très forte culture IA."
+    enabled: true
+
+  - name: Gladia
+    careers_url: https://jobs.ashbyhq.com/gladia
+    notes: "Paris. Transcription (ASR) temps réel. Proche de votre projet Meeting Assistant."
+    enabled: true
+
+  - name: Giskard
+    careers_url: https://jobs.lever.co/giskard
+    notes: "Paris. Qualité et sécurité des LLM."
+    enabled: true
+
+  - name: Dataiku
+    careers_url: https://job-boards.greenhouse.io/dataiku
+    api: https://boards-api.greenhouse.io/v1/boards/dataiku/jobs
+    notes: "Paris/NY. Leader Enterprise AI."
+    enabled: true
+
+  - name: Scaleway
+    careers_url: https://www.scaleway.com/en/careers/
+    notes: "Paris. Cloud souverain pour l'IA."
+    enabled: true
+
+  # -- US AI Giants with Paris Offices --
+
+  - name: OpenAI (Paris)
+    careers_url: https://openai.com/careers
+    scan_method: websearch
+    scan_query: 'site:openai.com/careers "Paris" "Solutions" OR "Forward Deployed" OR "Engineer"'
+    enabled: true
+
+  - name: Anthropic (Paris)
+    careers_url: https://job-boards.greenhouse.io/anthropic
+    api: https://boards-api.greenhouse.io/v1/boards/anthropic/jobs
+    scan_method: websearch
+    scan_query: 'site:job-boards.greenhouse.io/anthropic "Paris"'
+    enabled: true
+
+  - name: Cohere (Paris)
+    careers_url: https://jobs.ashbyhq.com/cohere
+    scan_method: websearch
+    scan_query: 'site:jobs.ashbyhq.com/cohere "Paris"'
+    enabled: true
+
+  - name: Palantir (Paris)
+    careers_url: https://jobs.lever.co/palantir
+    scan_method: websearch
+    scan_query: 'site:jobs.lever.co/palantir "Paris"'
+    notes: "FDSE / Deployment Strategist roles. Paris office."
+    enabled: true
+
+  # -- Big Tech with Paris AI Hubs --
+
+  - name: Microsoft (Paris)
+    careers_url: https://careers.microsoft.com/
+    scan_method: websearch
+    scan_query: 'site:careers.microsoft.com "Paris" "AI" "Solutions Architect" OR "Copilot" OR "Azure OpenAI"'
+    notes: "Match parfait avec votre passé de Regional Director."
+    enabled: true
+
+  - name: AWS (Amazon Paris)
+    careers_url: https://www.amazon.jobs/
+    scan_method: websearch
+    scan_query: 'site:amazon.jobs "Paris" "Generative AI" OR "Bedrock" "Solutions Architect" OR "Specialist"'
+    enabled: true
+
+  - name: Google Cloud (Paris)
+    careers_url: https://www.google.com/about/careers/applications/jobs/results
+    scan_method: websearch
+    scan_query: 'site:www.google.com/about/careers "Paris" "Solutions Architect" AI OR "Vertex AI"'
+    enabled: true
+
+  - name: Salesforce (Paris)
+    careers_url: https://careers.salesforce.com
+    scan_method: websearch
+    scan_query: 'site:careers.salesforce.com "Paris" "Forward Deployed" OR "Agentforce" OR "Solutions"'
+    notes: "Gros focus sur Agentforce à Paris."
+    enabled: true
+
+  - name: Meta (Paris)
+    careers_url: https://www.metacareers.com/jobs
+    scan_method: websearch
+    scan_query: 'site:www.metacareers.com "Paris" "AI" OR "Research" OR "Engineer" OR "Solutions" OR "Partner Engineering"'
+    notes: "FAIR (Recherche) + Partner Engineering (Déploiement Llama)."
+    enabled: true
+
+  # -- French Enterprise AI (Strategic/Regulated) --
+
+  - name: BNP Paribas
+    careers_url: https://group.bnpparibas/emploi/offres
+    scan_method: websearch
+    scan_query: 'site:group.bnpparibas/emploi "Paris" "Architecte IA" OR "Solutions IA"'
+    enabled: true
+
+  - name: AXA
+    careers_url: https://careers.axa/fr/rechercher-une-offre
+    scan_method: websearch
+    scan_query: 'site:careers.axa/fr "Paris" "IA" OR "AI" "Solutions" OR "Architecte"'
+    enabled: true
+
+  - name: Thales
+    careers_url: https://www.thalesgroup.com/fr/carrieres
+    scan_method: websearch
+    scan_query: 'site:www.thalesgroup.com/fr/carrieres "Paris" "IA" OR "AI" "Architecte" OR "Solutions"'
+    enabled: true
+
+  - name: LVMH
+    careers_url: https://www.lvmh.fr/talents/offres-demploi
+    scan_method: websearch
+    scan_query: 'site:www.lvmh.fr/talents "Paris" "AI" OR "IA" "Data" OR "Solutions"'
+    enabled: true
