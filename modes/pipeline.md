@@ -9,7 +9,16 @@ Procesa URLs de ofertas acumuladas en `data/pipeline.md`. El usuario agrega URLs
    a. Calcular siguiente `REPORT_NUM` secuencial (leer `reports/`, tomar el número más alto + 1)
    b. **Extraer JD** usando Playwright (browser_navigate + browser_snapshot) → WebFetch → WebSearch
    c. Si la URL no es accesible → marcar como `- [!]` con nota y continuar
-   d. **Ejecutar auto-pipeline completo**: Evaluación A-F → Report .md → PDF (si score >= 3.0) → Tracker
+   d. **Ejecutar auto-pipeline completo**: Evaluación A-H completa (misma profundidad que `/career-ops oferta` — ver `modes/oferta.md` para el formato exacto de cada bloque) → Report .md → PDF (si score >= 3.5) → Tracker
+
+   **CRITICAL — Depth requirement:** Each report must match the quality of a direct `/career-ops oferta` evaluation:
+   - Block A: table + 3-5 sentence narrative
+   - Block B: full requirements table + minimum 3 gaps with mitigation
+   - Block C: "sell senior" talking points (min 3) + downlevel plan + tricky questions
+   - Block D: salary research with cited sources (min 3 queries)
+   - Block E: Top 5 CV changes + Top 5 LinkedIn changes (both mandatory)
+   - Block F: 6-10 full STAR+R stories in narrative format + case study + red-flag Q&A
+   - Block H: draft application answers (if score >= 4.0)
    e. **Mover de "Pendientes" a "Procesadas"**: `- [x] #NNN | URL | Empresa | Rol | Score/5 | PDF ✅/❌`
 3. **Si hay 3+ URLs pendientes**, lanzar agentes en paralelo (Agent tool con `run_in_background`) para maximizar velocidad.
 4. **Al terminar**, mostrar tabla resumen:

@@ -18,7 +18,10 @@ Tabla con:
 - Seniority
 - Remote (full/hybrid/onsite)
 - Team size (si se menciona)
+- Salary range (si se menciona, o "Not disclosed")
 - TL;DR en 1 frase
+
+**Después de la tabla, escribir 3-5 oraciones de contexto narrativo:** qué hace la empresa, por qué contratan este rol ahora, cómo encaja en su estrategia, y qué hace que este rol sea interesante o arriesgado para el candidato.
 
 ## Bloque B — Match con CV
 
@@ -32,46 +35,66 @@ Lee `cv.md`. Crea tabla con cada requisito del JD mapeado a líneas exactas del 
 - Si Agentic → priorizar multi-agent, HITL, orchestration
 - Si Transformation → priorizar change management, adoption, scaling
 
-Sección de **gaps** con estrategia de mitigación para cada uno. Para cada gap:
+Sección de **gaps** con estrategia de mitigación para cada uno. **Mínimo 3 gaps analizados** (incluir los nice-to-haves aunque sean menores). Para cada gap:
 1. ¿Es un hard blocker o un nice-to-have?
 2. ¿Puede el candidato demostrar experiencia adyacente?
 3. ¿Hay un proyecto portfolio que cubra este gap?
 4. Plan de mitigación concreto (frase para cover letter, proyecto rápido, etc.)
 
+Terminar el bloque con un párrafo de **valoración global del match**: qué lo hace fuerte, qué lo limita, y veredicto en 2 frases.
+
 ## Bloque C — Nivel y Estrategia
 
 1. **Nivel detectado** en el JD vs **nivel natural del candidato para ese arquetipo**
-2. **Plan "vender senior sin mentir"**: frases específicas adaptadas al arquetipo, logros concretos a destacar, cómo posicionar la experiencia de founder como ventaja
+2. **Plan "vender senior sin mentir"**: mínimo 3 frases o talking points específicos adaptados al arquetipo. Cómo posicionar la experiencia de founder como ventaja. Qué NO decir (trampas de credibilidad).
 3. **Plan "si me downlevelan"**: aceptar si comp es justa, negociar review a 6 meses, criterios de promoción claros
+4. **Preguntas incómodas de nivel**: anticipar 2-3 preguntas que pueden cuestionar el seniority o el fit, con respuestas concretas
 
 ## Bloque D — Comp y Demanda
 
-Usar WebSearch para:
-- Salarios actuales del rol (Glassdoor, Levels.fyi, Blind)
-- Reputación de compensación de la empresa
-- Tendencia de demanda del rol
+Usar WebSearch para (mínimo 3 queries):
+- Salarios actuales del rol (Glassdoor, Levels.fyi, Blind, LinkedIn Salary)
+- Reputación de compensación de la empresa específica
+- Tendencia de demanda del rol en el mercado actual
 
-Tabla con datos y fuentes citadas. Si no hay datos, decirlo en vez de inventar.
+**Tabla con datos y fuentes citadas** (URL o nombre de fuente + fecha). Si no hay datos, decirlo en vez de inventar.
+
+Incluir:
+- Rango estimado base + variable/bonus + equity para este rol/empresa/ciudad
+- Cómo se compara con el target del candidato (€130K–€160K)
+- Nota de negociación: qué palancas tiene el candidato y cómo usarlas
 
 ## Bloque E — Plan de Personalización
 
-| # | Sección | Estado actual | Cambio propuesto | Por qué |
-|---|---------|---------------|------------------|---------|
-| 1 | Summary | ... | ... | ... |
-| ... | ... | ... | ... | ... |
+**Top 5 cambios al CV** (tabla con sección, estado actual, cambio propuesto, razón):
 
-Top 5 cambios al CV + Top 5 cambios a LinkedIn para maximizar match.
+| # | Sección CV | Estado actual | Cambio propuesto | Por qué |
+|---|-----------|---------------|------------------|---------|
+| 1 | ... | ... | ... | ... |
+
+**Top 5 cambios a LinkedIn** (tabla separada, misma estructura):
+
+| # | Sección LinkedIn | Estado actual | Cambio propuesto | Por qué |
+|---|-----------------|---------------|------------------|---------|
+| 1 | ... | ... | ... | ... |
+
+Ambas tablas son **obligatorias**. No reducir a menos de 5 cambios en cada una.
 
 ## Bloque F — Plan de Entrevistas
 
-6-10 historias STAR+R mapeadas a requisitos del JD (STAR + **Reflection**):
+**6-10 historias STAR+R** mapeadas a requisitos del JD. Mínimo 6. Cada historia debe escribirse en **formato narrativo expandido** (no solo una tabla comprimida):
 
-| # | Requisito del JD | Historia STAR+R | S | T | A | R | Reflection |
-|---|-----------------|-----------------|---|---|---|---|------------|
+Para cada historia:
+- **Título** (1 línea descriptiva)
+- **Situation:** 2-3 frases de contexto
+- **Task:** 1-2 frases de objetivo
+- **Action:** 3-5 frases de lo que hizo exactamente
+- **Result:** métricas concretas o outcome cualitativo claro
+- **Reflection:** lección aprendida o cómo aplicaría diferente ahora (señal de seniority)
 
-The **Reflection** column captures what was learned or what would be done differently. This signals seniority — junior candidates describe what happened, senior candidates extract lessons.
+The **Reflection** is not optional — it's what separates senior candidates from junior ones.
 
-**Story Bank:** If `interview-prep/story-bank.md` exists, check if any of these stories are already there. If not, append new ones. Over time this builds a reusable bank of 5-10 master stories that can be adapted to any interview question.
+**Story Bank:** If `interview-prep/story-bank.md` exists, check if any of these stories are already there. If not, append new ones.
 
 **Seleccionadas y enmarcadas según el arquetipo:**
 - FDE → enfatizar velocidad de entrega y client-facing
@@ -81,9 +104,11 @@ The **Reflection** column captures what was learned or what would be done differ
 - Agentic → enfatizar orchestration, error handling, HITL
 - Transformation → enfatizar adopción, cambio organizacional
 
-Incluir también:
-- 1 case study recomendado (cuál de sus proyectos presentar y cómo)
-- Preguntas red-flag y cómo responderlas (ej: "¿por qué vendiste tu empresa?", "¿tienes equipo de reports?")
+Incluir también al final del bloque:
+
+**Case Study recomendado:** cuál de sus proyectos presentar, en qué contexto, y guión de 5 pasos para presentarlo.
+
+**Preguntas red-flag y cómo responderlas** (mínimo 3): preguntas que pueden cuestionar gaps, cambios de carrera, o el fit. Respuestas concretas, no genéricas.
 
 ## Bloque G — Posting Legitimacy
 
@@ -189,7 +214,12 @@ Guardar evaluación completa en `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 (contenido completo del bloque G)
 
 ## H) Draft Application Answers
-(solo si score >= 4.5 — borradores de respuestas para el formulario de aplicación)
+(solo si score >= 4.0 — borradores de respuestas para el formulario de aplicación)
+
+Para cada pregunta típica del ATS o formulario de la empresa: respuesta completa lista para copiar/pegar. Adaptar al arquetipo y al JD específico. Mínimo 3 respuestas:
+1. "Why this role / Why this company?"
+2. "Describe a relevant achievement" (usar proof point más fuerte del candidato)
+3. Pregunta técnica o situacional específica del JD (si aplica)
 
 ---
 
