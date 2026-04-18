@@ -133,6 +133,14 @@ test('resolveScanMethod falls back to implicit playwright_generic and detectApi 
   });
 
   assert.deepEqual(detectApi({
+    name: 'Mistral',
+    careers_url: 'https://jobs.lever.co/mistral',
+  }), {
+    type: 'lever',
+    url: 'https://api.lever.co/v0/postings/mistral',
+  });
+
+  assert.deepEqual(detectApi({
     name: 'Dust',
     careers_url: 'https://jobs.ashbyhq.com/dust',
   }), {
