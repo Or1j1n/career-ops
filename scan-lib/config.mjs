@@ -34,7 +34,7 @@ export function buildTitleFilter(titleFilter) {
   const negative = (titleFilter?.negative || []).map((k) => k.toLowerCase());
 
   return (title) => {
-    const lower = title.toLowerCase();
+    const lower = String(title || '').toLowerCase();
     const hasPositive = positive.length === 0 || positive.some((k) => lower.includes(k));
     const hasNegative = negative.some((k) => lower.includes(k));
     return hasPositive && !hasNegative;

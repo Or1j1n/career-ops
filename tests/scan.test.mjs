@@ -10,6 +10,11 @@ import {
   resolveScanMethod,
 } from '../scan-lib/config.mjs';
 import { detectApi } from '../scan-lib/api.mjs';
+import {
+  applyScanWrites,
+  getPlaywrightConcurrency,
+  loadCustomAdapter,
+} from '../scan-lib/playwright.mjs';
 
 function withTempDir(fn) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'career-ops-scan-'));
@@ -185,4 +190,58 @@ test('resolveScanMethod falls back to implicit playwright_generic and detectApi 
     type: 'greenhouse',
     url: 'https://boards-api.greenhouse.io/v1/boards/shifttechnology/jobs',
   });
+});
+
+test('getPlaywrightConcurrency defaults to 2, respects 1, and caps at 3', () => {
+  assert.equal(getPlaywrightConcurrency(), 2);
+  assert.equal(getPlaywrightConcurrency(1), 1);
+  assert.equal(getPlaywrightConcurrency(10), 3);
+});
+
+test('loadCustomAdapter rejects with adapter name when adapter is missing', async () => {
+  await assert.rejects(
+    () => loadCustomAdapter('missing-adapter'),
+    (error) => {
+      assert.match(error.message, /missing-adapter/);
+      return true;
+    },
+  );
+});
+
+test('applyScanWrites skips writes in dry-run mode', () => {
+  let pipelineCalls = 0;
+  let historyCalls = 0;
+
+  applyScanWrites({
+    offers: [{ url: 'https://example.com/job', title: 'Engineer', company: 'Example', source: 'playwright_generic' }],
+    dryRun: true,
+    writePipeline: () => {
+      pipelineCalls += 1;
+    },
+    writeHistory: () => {
+      historyCalls += 1;
+    },
+  });
+
+  assert.equal(pipelineCalls, 0);
+  assert.equal(historyCalls, 0);
+});
+
+test('applyScanWrites skips writes when offers is empty', () => {
+  let pipelineCalls = 0;
+  let historyCalls = 0;
+
+  applyScanWrites({
+    offers: [],
+    dryRun: false,
+    writePipeline: () => {
+      pipelineCalls += 1;
+    },
+    writeHistory: () => {
+      historyCalls += 1;
+    },
+  });
+
+  assert.equal(pipelineCalls, 0);
+  assert.equal(historyCalls, 0);
 });

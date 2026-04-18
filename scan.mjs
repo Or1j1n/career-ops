@@ -17,6 +17,12 @@
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
 import { loadScanConfig, buildTitleFilter, buildLocationFilter, resolveScanMethod } from './scan-lib/config.mjs';
+import {
+  applyScanWrites,
+  getPlaywrightConcurrency,
+  runPlaywrightTarget,
+  withBrowser,
+} from './scan-lib/playwright.mjs';
 
 // ── Config ──────────────────────────────────────────────────────────
 
@@ -28,7 +34,8 @@ const APPLICATIONS_PATH = 'data/applications.md';
 // Ensure required directories exist (fresh setup)
 mkdirSync('data', { recursive: true });
 
-const CONCURRENCY = 10;
+const API_CONCURRENCY = 10;
+const PLAYWRIGHT_CONCURRENCY = 2;
 const FETCH_TIMEOUT_MS = 10_000;
 
 // ── API parsers ─────────────────────────────────────────────────────
@@ -212,6 +219,7 @@ async function main() {
     .filter(c => !filterCompany || c.name.toLowerCase().includes(filterCompany));
 
   const apiTargets = [];
+  const playwrightTargets = [];
   const deferredCompanies = [];
 
   for (const company of selectedCompanies) {
@@ -224,20 +232,31 @@ async function main() {
       continue;
     }
 
-    if (resolvedMethod.type === 'playwright_generic' && resolvedMethod.implicit) {
-      console.log(`[SCAN] ${company.name}: scanning via playwright_generic (no method declared, no ATS detected)`);
-      console.log(`[SCAN] ${company.name}: non-API execution deferred until Task 2`);
-    } else if (resolvedMethod.type === 'deferred' && resolvedMethod.explicit) {
+    if (resolvedMethod.type === 'playwright_generic' || resolvedMethod.type === 'playwright_custom') {
+      if (resolvedMethod.type === 'playwright_generic' && resolvedMethod.implicit) {
+        console.log(`[SCAN] ${company.name}: scanning via playwright_generic (no method declared, no ATS detected)`);
+      } else if (resolvedMethod.type === 'playwright_generic') {
+        console.log(`[SCAN] ${company.name}: scanning via playwright_generic`);
+      } else {
+        console.log(`[SCAN] ${company.name}: scanning via playwright_custom:${resolvedMethod.adapter}`);
+      }
+
+      playwrightTargets.push({
+        ...company,
+        _resolvedMethod: resolvedMethod,
+      });
+      continue;
+    }
+
+    if (resolvedMethod.type === 'deferred' && resolvedMethod.explicit) {
       console.log(`[SCAN] ${company.name}: ${resolvedMethod.method} configured but deferred until Task 2`);
-    } else if (resolvedMethod.type === 'playwright_generic') {
-      console.log(`[SCAN] ${company.name}: scanning via playwright_generic`);
     }
     deferredCompanies.push(company);
   }
 
-  const targets = apiTargets;
-
-  console.log(`Scanning ${targets.length} API companies (${deferredCompanies.length} deferred for non-API execution)`);
+  console.log(
+    `Scanning ${apiTargets.length} API companies, ${playwrightTargets.length} Playwright companies (${deferredCompanies.length} deferred explicit non-API methods)`,
+  );
   if (dryRun) console.log('(dry run — no files will be written)\n');
 
   // 3. Load dedup sets
@@ -252,7 +271,7 @@ async function main() {
   const newOffers = [];
   const errors = [];
 
-  const tasks = targets.map(company => async () => {
+  const apiTasks = apiTargets.map(company => async () => {
     const { type, url } = company._api;
     try {
       const json = await fetchJson(url);
@@ -287,20 +306,70 @@ async function main() {
     }
   });
 
-  await parallelFetch(tasks, CONCURRENCY);
+  await parallelFetch(apiTasks, API_CONCURRENCY);
+
+  if (playwrightTargets.length > 0) {
+    await withBrowser(async (browser) => {
+      const playwrightTasks = playwrightTargets.map(company => async () => {
+        try {
+          const jobs = await runPlaywrightTarget(browser, company);
+          totalFound += jobs.length;
+
+          for (const job of jobs) {
+            if (!titleFilter(job.title)) {
+              totalFiltered++;
+              continue;
+            }
+            if (!locationFilter(job.location)) {
+              totalFiltered++;
+              continue;
+            }
+            if (seenUrls.has(job.url)) {
+              totalDupes++;
+              continue;
+            }
+            const key = `${job.company.toLowerCase()}::${job.title.toLowerCase()}`;
+            if (seenCompanyRoles.has(key)) {
+              totalDupes++;
+              continue;
+            }
+
+            seenUrls.add(job.url);
+            seenCompanyRoles.add(key);
+
+            const source = company._resolvedMethod.type === 'playwright_custom'
+              ? `playwright_custom:${company._resolvedMethod.adapter}`
+              : 'playwright_generic';
+
+            newOffers.push({ ...job, source, location: job.location || '' });
+          }
+        } catch (err) {
+          errors.push({ company: company.name, error: err.message });
+        }
+      });
+
+      await parallelFetch(
+        playwrightTasks,
+        getPlaywrightConcurrency(PLAYWRIGHT_CONCURRENCY),
+      );
+    });
+  }
 
   // 5. Write results
-  if (!dryRun && newOffers.length > 0) {
-    appendToPipeline(newOffers);
-    appendToScanHistory(newOffers, date);
-  }
+  applyScanWrites({
+    offers: newOffers,
+    dryRun,
+    writePipeline: appendToPipeline,
+    writeHistory: (offers) => appendToScanHistory(offers, date),
+  });
 
   // 6. Print summary
   console.log(`\n${'━'.repeat(45)}`);
   console.log(`Portal Scan — ${date}`);
   console.log(`${'━'.repeat(45)}`);
   console.log(`Companies selected:    ${selectedCompanies.length}`);
-  console.log(`API companies scanned: ${targets.length}`);
+  console.log(`API companies scanned: ${apiTargets.length}`);
+  console.log(`Playwright scanned:    ${playwrightTargets.length}`);
   console.log(`Non-API deferred:      ${deferredCompanies.length}`);
   console.log(`Total jobs found:      ${totalFound}`);
   console.log(`Filtered by title:     ${totalFiltered} removed`);
