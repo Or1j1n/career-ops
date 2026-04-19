@@ -262,12 +262,28 @@ test('custom adapters load for big tech priority companies', async () => {
   }
 });
 
-test('microsoft adapter extracts the card heading and fixed Paris location', async () => {
-  const card = {
+test('microsoft adapter walks ancestors to find the card heading and keeps Paris location', async () => {
+  const columnContainer = {
+    parentElement: null,
     querySelector(selector) {
       if (selector === 'h3.careers-joblistResponsive-subheading') {
-        return { textContent: 'Applied AI Consultant' };
+        return { textContent: 'Logistics/Warehouse Technician' };
       }
+      return null;
+    },
+  };
+  const columnList = {
+    parentElement: columnContainer,
+    querySelector(selector) {
+      if (selector === 'h3.careers-joblistResponsive-subheading') {
+        return { textContent: 'Logistics/Warehouse Technician' };
+      }
+      return null;
+    },
+  };
+  const wrapperOne = {
+    parentElement: columnList,
+    querySelector() {
       return null;
     },
   };
@@ -278,9 +294,9 @@ test('microsoft adapter extracts the card heading and fixed Paris location', asy
       return null;
     },
     closest() {
-      return card;
+      return wrapperOne;
     },
-    parentElement: card,
+    parentElement: wrapperOne,
   };
 
   await withWindow('https://careers.microsoft.com/v2/global/en/locations/paris.html', async () => {
@@ -311,7 +327,7 @@ test('microsoft adapter extracts the card heading and fixed Paris location', asy
     });
 
     assert.deepEqual(offers, [{
-      title: 'Applied AI Consultant',
+      title: 'Logistics/Warehouse Technician',
       url: 'https://careers.microsoft.com/job/123',
       company: 'Microsoft (Paris)',
       location: 'Paris',
@@ -404,6 +420,53 @@ test('google cloud adapter prefers h3 title, strips aria-label fallback, and kee
   });
 });
 
+test('google cloud adapter uses aria-label when no h3 is present', async () => {
+  const card = {
+    querySelector() {
+      return null;
+    },
+  };
+  const anchor = {
+    textContent: 'Learn more',
+    getAttribute(name) {
+      if (name === 'href') return 'jobs/results/789';
+      if (name === 'aria-label') return 'Learn more about Technical Account Manager';
+      return null;
+    },
+    closest() {
+      return card;
+    },
+    parentElement: card,
+  };
+
+  await withWindow('https://careers.google.com/jobs/results', async () => {
+    const page = {
+      async goto() {},
+      async waitForLoadState() {},
+      locator(selector) {
+        assert.equal(selector, 'a[href*="jobs/results/"]');
+        return {
+          async evaluateAll(callback) {
+            return callback([anchor]);
+          },
+        };
+      },
+    };
+
+    const offers = await scanGoogleCloud(page, {
+      name: 'Google Cloud (Paris)',
+      careers_url: 'https://careers.google.com/jobs/results',
+    });
+
+    assert.deepEqual(offers, [{
+      title: 'Technical Account Manager',
+      url: 'https://careers.google.com/jobs/results/789',
+      company: 'Google Cloud (Paris)',
+      location: '',
+    }]);
+  });
+});
+
 test('meta adapter prefers h3 title and precise span location for job detail links', async () => {
   const card = {
     querySelector(selector) {
@@ -484,6 +547,58 @@ test('meta adapter prefers h3 title and precise span location for job detail lin
     }, {
       title: 'Partner Engineer',
       url: 'https://www.metacareers.com/profile/job_details/456',
+      company: 'Meta (Paris)',
+      location: '',
+    }]);
+  });
+});
+
+test('meta adapter returns empty location when only broad generic spans are present', async () => {
+  const card = {
+    querySelector(selector) {
+      if (selector === 'h3') {
+        return { textContent: 'Partner Engineer' };
+      }
+      if (selector === 'span[dir="auto"]') {
+        return { textContent: 'This should not be treated as location' };
+      }
+      return null;
+    },
+  };
+  const anchor = {
+    textContent: '',
+    getAttribute(name) {
+      if (name === 'href') return '/profile/job_details/999';
+      return null;
+    },
+    closest() {
+      return card;
+    },
+    parentElement: card,
+  };
+
+  await withWindow('https://www.metacareers.com/jobs', async () => {
+    const page = {
+      async goto() {},
+      async waitForLoadState() {},
+      locator(selector) {
+        assert.equal(selector, 'a[href*="/profile/job_details/"]');
+        return {
+          async evaluateAll(callback) {
+            return callback([anchor]);
+          },
+        };
+      },
+    };
+
+    const offers = await scanMeta(page, {
+      name: 'Meta (Paris)',
+      careers_url: 'https://www.metacareers.com/jobs',
+    });
+
+    assert.deepEqual(offers, [{
+      title: 'Partner Engineer',
+      url: 'https://www.metacareers.com/profile/job_details/999',
       company: 'Meta (Paris)',
       location: '',
     }]);

@@ -9,7 +9,6 @@ export async function scan(page, company) {
     const locationSelectors = [
       'span[data-testid="job-location"]',
       'span[data-testid="location"]',
-      'span[dir="auto"]',
     ];
 
     function getLocation(anchor) {

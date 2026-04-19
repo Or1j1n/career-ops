@@ -6,15 +6,26 @@ export async function scan(page, company) {
   await page.waitForLoadState('networkidle').catch(() => {});
 
   const offers = await page.locator('a').evaluateAll((anchors) => {
+    function findTitle(anchor) {
+      let node = anchor.parentElement;
+
+      while (node) {
+        const heading = node.querySelector?.('h3.careers-joblistResponsive-subheading');
+        const title = heading?.textContent?.trim();
+        if (title) return title;
+        node = node.parentElement;
+      }
+
+      return '';
+    }
+
     return anchors
       .map((anchor) => {
         const href = anchor.getAttribute('href');
         if (!href || !href.includes('/job/')) return null;
 
-        const container = anchor.closest?.('article, li, div, section') || anchor.parentElement || anchor;
-        const heading = container?.querySelector?.('h3.careers-joblistResponsive-subheading');
         const title = (
-          heading?.textContent?.trim() ||
+          findTitle(anchor) ||
           anchor.getAttribute('aria-label') ||
           anchor.getAttribute('title') ||
           ''
