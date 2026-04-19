@@ -11,8 +11,10 @@ export async function scan(page, company) {
         const href = anchor.getAttribute('href');
         if (!href || !href.includes('/job/')) return null;
 
+        const container = anchor.closest?.('article, li, div, section') || anchor.parentElement || anchor;
+        const heading = container?.querySelector?.('h3.careers-joblistResponsive-subheading');
         const title = (
-          anchor.textContent?.trim() ||
+          heading?.textContent?.trim() ||
           anchor.getAttribute('aria-label') ||
           anchor.getAttribute('title') ||
           ''

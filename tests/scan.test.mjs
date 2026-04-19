@@ -17,6 +17,9 @@ import {
   runPlaywrightTarget,
   scanWithPlaywrightGeneric,
 } from '../scan-lib/playwright.mjs';
+import { scan as scanMicrosoft } from '../adapters/microsoft.mjs';
+import { scan as scanGoogleCloud } from '../adapters/google-cloud.mjs';
+import { scan as scanMeta } from '../adapters/meta.mjs';
 
 function withTempDir(fn) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'career-ops-scan-'));
@@ -24,6 +27,17 @@ function withTempDir(fn) {
     return fn(dir);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+async function withWindow(href, fn) {
+  const originalWindow = globalThis.window;
+  globalThis.window = { location: { href } };
+
+  try {
+    return await fn();
+  } finally {
+    globalThis.window = originalWindow;
   }
 }
 
@@ -141,6 +155,23 @@ test('resolveScanMethod keeps explicit websearch deferred instead of implicit', 
   });
 });
 
+test('resolveScanMethod keeps OpenAI and Salesforce on explicit deferred websearch', () => {
+  const config = loadScanConfig('portals.yml');
+  const byName = new Map((config.tracked_companies || []).map((company) => [company.name, company]));
+
+  assert.deepEqual(resolveScanMethod(byName.get('OpenAI (Paris)')), {
+    type: 'deferred',
+    method: 'websearch',
+    explicit: true,
+  });
+
+  assert.deepEqual(resolveScanMethod(byName.get('Salesforce (Paris)')), {
+    type: 'deferred',
+    method: 'websearch',
+    explicit: true,
+  });
+});
+
 test('resolveScanMethod falls back to implicit playwright_generic and detectApi covers the explicit ATS examples from Task 1', () => {
   const implicit = resolveScanMethod({
     name: 'UnknownCo',
@@ -229,6 +260,234 @@ test('custom adapters load for big tech priority companies', async () => {
   for (const adapter of adapters) {
     assert.equal(typeof adapter, 'function');
   }
+});
+
+test('microsoft adapter extracts the card heading and fixed Paris location', async () => {
+  const card = {
+    querySelector(selector) {
+      if (selector === 'h3.careers-joblistResponsive-subheading') {
+        return { textContent: 'Applied AI Consultant' };
+      }
+      return null;
+    },
+  };
+  const anchor = {
+    textContent: 'See details',
+    getAttribute(name) {
+      if (name === 'href') return '/job/123';
+      return null;
+    },
+    closest() {
+      return card;
+    },
+    parentElement: card,
+  };
+
+  await withWindow('https://careers.microsoft.com/v2/global/en/locations/paris.html', async () => {
+    const page = {
+      async goto(url, options) {
+        assert.deepEqual({ url, options }, {
+          url: 'https://careers.microsoft.com/v2/global/en/locations/paris.html',
+          options: {
+            waitUntil: 'domcontentloaded',
+            timeout: 30_000,
+          },
+        });
+      },
+      async waitForLoadState() {},
+      locator(selector) {
+        assert.equal(selector, 'a');
+        return {
+          async evaluateAll(callback) {
+            return callback([anchor]);
+          },
+        };
+      },
+    };
+
+    const offers = await scanMicrosoft(page, {
+      name: 'Microsoft (Paris)',
+      careers_url: 'https://careers.microsoft.com/v2/global/en/locations/paris.html',
+    });
+
+    assert.deepEqual(offers, [{
+      title: 'Applied AI Consultant',
+      url: 'https://careers.microsoft.com/job/123',
+      company: 'Microsoft (Paris)',
+      location: 'Paris',
+    }]);
+  });
+});
+
+test('google cloud adapter prefers h3 title, strips aria-label fallback, and keeps precise location only', async () => {
+  const locatedCard = {
+    querySelector(selector) {
+      if (selector === 'h3.QJPWVe') {
+        return { textContent: 'Solutions Architect' };
+      }
+      if (selector === '.r0wTof') {
+        return { textContent: 'Paris, France' };
+      }
+      return null;
+    },
+  };
+  const fallbackCard = {
+    querySelector() {
+      return null;
+    },
+  };
+  const anchors = [
+    {
+      textContent: 'Learn more',
+      getAttribute(name) {
+        if (name === 'href') return 'jobs/results/123';
+        if (name === 'aria-label') return 'Learn more about Field Sales Engineer';
+        return null;
+      },
+      closest() {
+        return locatedCard;
+      },
+      parentElement: locatedCard,
+    },
+    {
+      textContent: '',
+      getAttribute(name) {
+        if (name === 'href') return 'jobs/results/456';
+        if (name === 'aria-label') return 'Learn more about Customer Engineer';
+        return null;
+      },
+      closest() {
+        return fallbackCard;
+      },
+      parentElement: fallbackCard,
+    },
+  ];
+
+  await withWindow('https://careers.google.com/jobs/results', async () => {
+    const page = {
+      async goto(url, options) {
+        assert.deepEqual({ url, options }, {
+          url: 'https://careers.google.com/jobs/results',
+          options: {
+            waitUntil: 'domcontentloaded',
+            timeout: 30_000,
+          },
+        });
+      },
+      async waitForLoadState() {},
+      locator(selector) {
+        assert.equal(selector, 'a[href*="jobs/results/"]');
+        return {
+          async evaluateAll(callback) {
+            return callback(anchors);
+          },
+        };
+      },
+    };
+
+    const offers = await scanGoogleCloud(page, {
+      name: 'Google Cloud (Paris)',
+      careers_url: 'https://careers.google.com/jobs/results',
+    });
+
+    assert.deepEqual(offers, [{
+      title: 'Solutions Architect',
+      url: 'https://careers.google.com/jobs/results/123',
+      company: 'Google Cloud (Paris)',
+      location: 'Paris, France',
+    }, {
+      title: 'Customer Engineer',
+      url: 'https://careers.google.com/jobs/results/456',
+      company: 'Google Cloud (Paris)',
+      location: '',
+    }]);
+  });
+});
+
+test('meta adapter prefers h3 title and precise span location for job detail links', async () => {
+  const card = {
+    querySelector(selector) {
+      if (selector === 'h3') {
+        return { textContent: 'Deployment Strategist' };
+      }
+      if (selector === 'span[data-testid="job-location"]') {
+        return { textContent: 'Sunnyvale, CA +14 locations' };
+      }
+      return null;
+    },
+  };
+  const fallbackCard = {
+    querySelector(selector) {
+      if (selector === 'h3') {
+        return { textContent: 'Partner Engineer' };
+      }
+      return null;
+    },
+  };
+  const anchors = [
+    {
+      textContent: 'Apply now',
+      getAttribute(name) {
+        if (name === 'href') return '/profile/job_details/123';
+        return null;
+      },
+      closest() {
+        return card;
+      },
+      parentElement: card,
+    },
+    {
+      textContent: '',
+      getAttribute(name) {
+        if (name === 'href') return '/profile/job_details/456';
+        return null;
+      },
+      closest() {
+        return fallbackCard;
+      },
+      parentElement: fallbackCard,
+    },
+  ];
+
+  await withWindow('https://www.metacareers.com/jobs', async () => {
+    const page = {
+      async goto(url, options) {
+        assert.deepEqual({ url, options }, {
+          url: 'https://www.metacareers.com/jobs',
+          options: {
+            waitUntil: 'domcontentloaded',
+            timeout: 30_000,
+          },
+        });
+      },
+      async waitForLoadState() {},
+      locator(selector) {
+        assert.equal(selector, 'a[href*="/profile/job_details/"]');
+        return {
+          async evaluateAll(callback) {
+            return callback(anchors);
+          },
+        };
+      },
+    };
+
+    const offers = await scanMeta(page, {
+      name: 'Meta (Paris)',
+      careers_url: 'https://www.metacareers.com/jobs',
+    });
+
+    assert.deepEqual(offers, [{
+      title: 'Deployment Strategist',
+      url: 'https://www.metacareers.com/profile/job_details/123',
+      company: 'Meta (Paris)',
+      location: 'Sunnyvale, CA +14 locations',
+    }, {
+      title: 'Partner Engineer',
+      url: 'https://www.metacareers.com/profile/job_details/456',
+      company: 'Meta (Paris)',
+      location: '',
+    }]);
+  });
 });
 
 test('portals.yml defines a strict IDF location filter and V1 companies', () => {
@@ -432,4 +691,69 @@ test('runPlaywrightTarget generic path returns offers and closes the page', asyn
     location: '',
   }]);
   assert.deepEqual(trace, ['newPage', 'goto', 'evaluateAll', 'close']);
+});
+
+test('runPlaywrightTarget dispatches a custom adapter function', async () => {
+  const trace = [];
+  const adapterDir = fs.mkdtempSync(path.join(process.cwd(), 'adapters', '__test-'));
+  const adapterName = `${path.basename(adapterDir)}/probe`;
+  const adapterPath = path.join(adapterDir, 'probe.mjs');
+
+  fs.writeFileSync(adapterPath, `
+export async function scan(page, company) {
+  globalThis.__customAdapterTrace.push(['scan', company.name]);
+  return [{
+    title: 'Custom Probe',
+    url: 'https://example.com/custom',
+    company: company.name,
+    location: 'Paris',
+  }];
+}
+`);
+
+  const page = {
+    async goto() {
+      trace.push('goto');
+    },
+    locator() {
+      trace.push('locator');
+      return {
+        async evaluateAll() {
+          trace.push('evaluateAll');
+          return [];
+        },
+      };
+    },
+    async close() {
+      trace.push('close');
+    },
+  };
+  const browser = {
+    async newPage() {
+      trace.push('newPage');
+      return page;
+    },
+  };
+
+  try {
+    globalThis.__customAdapterTrace = trace;
+
+    const offers = await runPlaywrightTarget(browser, {
+      name: 'Probe',
+      careers_url: 'https://example.com/careers',
+      scan_method: 'playwright_custom',
+      scan_adapter: adapterName,
+    });
+
+    assert.deepEqual(offers, [{
+      title: 'Custom Probe',
+      url: 'https://example.com/custom',
+      company: 'Probe',
+      location: 'Paris',
+    }]);
+    assert.deepEqual(trace, ['newPage', ['scan', 'Probe'], 'close']);
+  } finally {
+    delete globalThis.__customAdapterTrace;
+    fs.rmSync(adapterDir, { recursive: true, force: true });
+  }
 });

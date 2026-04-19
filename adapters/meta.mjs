@@ -5,21 +5,19 @@ export async function scan(page, company) {
   });
   await page.waitForLoadState('networkidle').catch(() => {});
 
-  const offers = await page.locator('a[href*="/jobs/"]').evaluateAll((anchors) => {
+  const offers = await page.locator('a[href*="/profile/job_details/"]').evaluateAll((anchors) => {
     const locationSelectors = [
-      '[data-testid="location"]',
-      '[data-qa="job-location"]',
-      '[class*="location"]',
-      '[aria-label*="location" i]',
-      '[aria-label*="lieu" i]',
+      'span[data-testid="job-location"]',
+      'span[data-testid="location"]',
+      'span[dir="auto"]',
     ];
 
     function getLocation(anchor) {
-      const container = anchor.closest('article, li, div, section');
+      const container = anchor.closest?.('article, li, div, section') || anchor.parentElement;
       if (!container) return '';
 
       for (const selector of locationSelectors) {
-        const node = container.querySelector(selector);
+        const node = container.querySelector?.(selector);
         const value = node?.textContent?.trim();
         if (value) return value;
       }
@@ -30,10 +28,12 @@ export async function scan(page, company) {
     return anchors
       .map((anchor) => {
         const href = anchor.getAttribute('href');
-        if (!href) return null;
+        if (!href || !href.includes('/profile/job_details/')) return null;
 
+        const container = anchor.closest?.('article, li, div, section') || anchor.parentElement || anchor;
+        const heading = container?.querySelector?.('h3');
         const title = (
-          anchor.textContent?.trim() ||
+          heading?.textContent?.trim() ||
           anchor.getAttribute('aria-label') ||
           anchor.getAttribute('title') ||
           ''

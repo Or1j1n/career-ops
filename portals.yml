@@ -166,8 +166,9 @@ tracked_companies:
   # -- US AI Giants with Paris Offices --
 
   - name: OpenAI (Paris)
-    careers_url: https://openai.com/careers/search
-    scan_method: playwright_generic
+    careers_url: https://openai.com/careers
+    scan_method: websearch
+    scan_query: 'site:openai.com/careers Paris (solutions OR deployment OR engineer)'
     enabled: true
 
   - name: Anthropic (Paris)
@@ -212,9 +213,9 @@ tracked_companies:
     enabled: true
 
   - name: Salesforce (Paris)
-    careers_url: https://careers.salesforce.com/fr/
-    scan_method: playwright_custom
-    scan_adapter: salesforce
+    careers_url: https://careers.salesforce.com
+    scan_method: websearch
+    scan_query: 'site:careers.salesforce.com Paris (Agentforce OR forward-deployed OR solutions OR engineer)'
     notes: "Gros focus sur Agentforce à Paris."
     enabled: true
 
