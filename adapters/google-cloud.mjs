@@ -35,8 +35,18 @@ export async function scan(page, company) {
     function normalizeLocation(value) {
       const text = String(value || '').trim();
       if (!text) return '';
+      if (/;/.test(text)) return '';
+      if (/\+\s*\d+\s+more/i.test(text)) return '';
+      if (/\+\s*\d+\s+locations?/i.test(text)) return '';
+      if (/multiple locations/i.test(text)) return '';
       const afterPipe = text.includes('|') ? text.split('|').pop() : text;
-      return afterPipe.replace(/^place\s*/i, '').trim();
+      const normalized = afterPipe.replace(/^place\s*/i, '').trim();
+      if (!normalized) return '';
+      if (/;/.test(normalized)) return '';
+      if (/\+\s*\d+\s+more/i.test(normalized)) return '';
+      if (/\+\s*\d+\s+locations?/i.test(normalized)) return '';
+      if (/multiple locations/i.test(normalized)) return '';
+      return normalized;
     }
 
     function getLocation(cardRoot) {

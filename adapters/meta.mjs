@@ -15,16 +15,14 @@ export async function scan(page, company) {
       const text = String(value || '').trim();
       if (!text) return '';
       if (/multiple locations/i.test(text)) return '';
-      if (/\+.*locations?/i.test(text)) return '';
+      if (/\+\s*\d+\s+more/i.test(text)) return '';
+      if (/\+\s*\d+\s+locations?/i.test(text)) return '';
       return text;
     }
 
-    function getLocation(anchor) {
-      const container = anchor.closest?.('article, li, div, section') || anchor.parentElement;
-      if (!container) return '';
-
+    function getLocation(cardRoot) {
       for (const selector of locationSelectors) {
-        const node = container.querySelector?.(selector);
+        const node = cardRoot.querySelector?.(selector);
         const value = normalizeLocation(node?.textContent);
         if (value) return value;
       }
@@ -37,8 +35,8 @@ export async function scan(page, company) {
         const href = anchor.getAttribute('href');
         if (!href || !href.includes('/profile/job_details/')) return null;
 
-        const container = anchor.closest?.('article, li, div, section') || anchor.parentElement || anchor;
-        const heading = container?.querySelector?.('h3');
+        const cardRoot = anchor;
+        const heading = cardRoot.querySelector?.('h3');
         const title = (
           heading?.textContent?.trim() ||
           anchor.getAttribute('aria-label') ||
@@ -51,7 +49,7 @@ export async function scan(page, company) {
           title,
           url: new URL(href, window.location.href).href,
           company: '',
-          location: getLocation(anchor),
+          location: getLocation(cardRoot),
         };
       })
       .filter(Boolean);

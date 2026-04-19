@@ -455,6 +455,59 @@ test('google cloud adapter uses the nearest Google card root and ignores sibling
   });
 });
 
+test('google cloud adapter rejects composite location labels with semicolons and more markers', async () => {
+  const card = {
+    querySelector(selector) {
+      if (selector === 'h3.QJPWVe') {
+        return { textContent: 'Site Reliability Engineer' };
+      }
+      if (selector === 'div.EAcu5e.Gx4ovb') {
+        return { textContent: 'Canberra ACT, Australia; Sydney NSW, Australia; +2 more; +1 more' };
+      }
+      return null;
+    },
+  };
+  const anchor = {
+    textContent: 'Learn more',
+    getAttribute(name) {
+      if (name === 'href') return 'jobs/results/321';
+      if (name === 'aria-label') return 'Learn more about Site Reliability Engineer';
+      return null;
+    },
+    closest() {
+      return card;
+    },
+    parentElement: card,
+  };
+
+  await withWindow('https://careers.google.com/jobs/results', async () => {
+    const page = {
+      async goto() {},
+      async waitForLoadState() {},
+      locator(selector) {
+        assert.equal(selector, 'a[href*="jobs/results/"]');
+        return {
+          async evaluateAll(callback) {
+            return callback([anchor]);
+          },
+        };
+      },
+    };
+
+    const offers = await scanGoogleCloud(page, {
+      name: 'Google Cloud (Paris)',
+      careers_url: 'https://careers.google.com/jobs/results',
+    });
+
+    assert.deepEqual(offers, [{
+      title: 'Site Reliability Engineer',
+      url: 'https://careers.google.com/jobs/results/321',
+      company: 'Google Cloud (Paris)',
+      location: '',
+    }]);
+  });
+});
+
 test('google cloud adapter uses aria-label when no h3 is present', async () => {
   const card = {
     querySelector() {
@@ -502,8 +555,19 @@ test('google cloud adapter uses aria-label when no h3 is present', async () => {
   });
 });
 
-test('meta adapter prefers h3 title and precise span location for job detail links', async () => {
-  const card = {
+test('meta adapter prefers anchor h3 title and keeps location lookup on the same anchor root', async () => {
+  const contaminatedWrapper = {
+    querySelector(selector) {
+      if (selector === 'h3') {
+        return { textContent: 'Shared Wrapper Title' };
+      }
+      if (selector === 'span[data-testid="job-location"]') {
+        return { textContent: 'Menlo Park, CA' };
+      }
+      return null;
+    },
+  };
+  const anchor = {
     querySelector(selector) {
       if (selector === 'h3') {
         return { textContent: 'Deployment Strategist' };
@@ -513,42 +577,17 @@ test('meta adapter prefers h3 title and precise span location for job detail lin
       }
       return null;
     },
-  };
-  const secondCard = {
-    querySelector(selector) {
-      if (selector === 'h3') {
-        return { textContent: 'Partner Engineer' };
-      }
-      if (selector === 'span[data-testid="location"]') {
-        return { textContent: 'Multiple Locations' };
-      }
+    textContent: 'Apply now',
+    getAttribute(name) {
+      if (name === 'href') return '/profile/job_details/123';
+      if (name === 'aria-label') return 'Shared Wrapper Title';
       return null;
     },
+    closest() {
+      return contaminatedWrapper;
+    },
+    parentElement: contaminatedWrapper,
   };
-  const anchors = [
-    {
-      textContent: 'Apply now',
-      getAttribute(name) {
-        if (name === 'href') return '/profile/job_details/123';
-        return null;
-      },
-      closest() {
-        return card;
-      },
-      parentElement: card,
-    },
-    {
-      textContent: '',
-      getAttribute(name) {
-        if (name === 'href') return '/profile/job_details/456';
-        return null;
-      },
-      closest() {
-        return secondCard;
-      },
-      parentElement: secondCard,
-    },
-  ];
 
   await withWindow('https://www.metacareers.com/jobs', async () => {
     const page = {
@@ -566,7 +605,7 @@ test('meta adapter prefers h3 title and precise span location for job detail lin
         assert.equal(selector, 'a[href*="/profile/job_details/"]');
         return {
           async evaluateAll(callback) {
-            return callback(anchors);
+            return callback([anchor]);
           },
         };
       },
@@ -580,11 +619,6 @@ test('meta adapter prefers h3 title and precise span location for job detail lin
     assert.deepEqual(offers, [{
       title: 'Deployment Strategist',
       url: 'https://www.metacareers.com/profile/job_details/123',
-      company: 'Meta (Paris)',
-      location: '',
-    }, {
-      title: 'Partner Engineer',
-      url: 'https://www.metacareers.com/profile/job_details/456',
       company: 'Meta (Paris)',
       location: '',
     }]);
