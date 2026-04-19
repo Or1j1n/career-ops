@@ -6,17 +6,24 @@ export async function scan(page, company) {
   await page.waitForLoadState('networkidle').catch(() => {});
 
   const offers = await page.locator('a').evaluateAll((anchors) => {
-    function findTitle(anchor) {
-      let node = anchor.parentElement;
+    function getClassName(node) {
+      return String(node?.className || node?.getAttribute?.('class') || '');
+    }
 
+    function findCardRoot(anchor) {
+      let node = anchor.parentElement;
       while (node) {
-        const heading = node.querySelector?.('h3.careers-joblistResponsive-subheading');
-        const title = heading?.textContent?.trim();
-        if (title) return title;
+        const className = getClassName(node);
+        if (
+          className.includes('careers-joblistResponsive-columnList') ||
+          className.includes('careers-joblistResponsive-columncontainer')
+        ) {
+          return node;
+        }
         node = node.parentElement;
       }
 
-      return '';
+      return anchor.parentElement || anchor;
     }
 
     return anchors
@@ -24,8 +31,10 @@ export async function scan(page, company) {
         const href = anchor.getAttribute('href');
         if (!href || !href.includes('/job/')) return null;
 
+        const cardRoot = findCardRoot(anchor);
+        const heading = cardRoot?.querySelector?.('h3.careers-joblistResponsive-subheading');
         const title = (
-          findTitle(anchor) ||
+          heading?.textContent?.trim() ||
           anchor.getAttribute('aria-label') ||
           anchor.getAttribute('title') ||
           ''

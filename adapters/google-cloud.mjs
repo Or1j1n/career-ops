@@ -14,11 +14,16 @@ export async function scan(page, company) {
       '[data-testid="location"]',
     ];
 
+    function getClassName(node) {
+      return String(node?.className || node?.getAttribute?.('class') || '');
+    }
+
     function findCardRoot(anchor) {
       let node = anchor.parentElement;
 
       while (node) {
-        if (node.querySelector?.('h3.QJPWVe')) {
+        const className = getClassName(node);
+        if (className.includes('sMn82b') || className.includes('lLd3Je')) {
           return node;
         }
         node = node.parentElement;

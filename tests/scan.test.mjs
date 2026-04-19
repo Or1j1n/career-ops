@@ -262,28 +262,42 @@ test('custom adapters load for big tech priority companies', async () => {
   }
 });
 
-test('microsoft adapter walks ancestors to find the card heading and keeps Paris location', async () => {
-  const columnContainer = {
+test('microsoft adapter uses the nearest Microsoft card root and ignores sibling card titles', async () => {
+  const sharedWrapper = {
     parentElement: null,
     querySelector(selector) {
       if (selector === 'h3.careers-joblistResponsive-subheading') {
-        return { textContent: 'Logistics/Warehouse Technician' };
+        return { textContent: 'Card A Title' };
       }
       return null;
     },
   };
-  const columnList = {
-    parentElement: columnContainer,
+  const siblingCardA = {
+    className: 'careers-joblistResponsive-columncontainer card-a',
+    parentElement: sharedWrapper,
     querySelector(selector) {
       if (selector === 'h3.careers-joblistResponsive-subheading') {
-        return { textContent: 'Logistics/Warehouse Technician' };
+        return { textContent: 'Card A Title' };
+      }
+      return null;
+    },
+  };
+  const siblingCardB = {
+    className: 'careers-joblistResponsive-columnList card-b',
+    parentElement: sharedWrapper,
+    querySelector(selector) {
+      if (selector === 'h3.careers-joblistResponsive-subheading') {
+        return { textContent: 'Card B Title' };
       }
       return null;
     },
   };
   const wrapperOne = {
-    parentElement: columnList,
-    querySelector() {
+    parentElement: siblingCardB,
+    querySelector(selector) {
+      if (selector === 'h3.careers-joblistResponsive-subheading') {
+        return { textContent: 'Card A Title' };
+      }
       return null;
     },
   };
@@ -327,7 +341,7 @@ test('microsoft adapter walks ancestors to find the card heading and keeps Paris
     });
 
     assert.deepEqual(offers, [{
-      title: 'Logistics/Warehouse Technician',
+      title: 'Card B Title',
       url: 'https://careers.microsoft.com/job/123',
       company: 'Microsoft (Paris)',
       location: 'Paris',
@@ -335,8 +349,38 @@ test('microsoft adapter walks ancestors to find the card heading and keeps Paris
   });
 });
 
-test('google cloud adapter walks to the real card root and normalizes title and location', async () => {
-  const cardRoot = {
+test('google cloud adapter uses the nearest Google card root and ignores sibling card data', async () => {
+  const sharedWrapper = {
+    parentElement: null,
+    querySelector(selector) {
+      if (selector === 'h3.QJPWVe') {
+        return { textContent: 'Card A Google Title' };
+      }
+      return null;
+    },
+  };
+  const siblingCardA = {
+    className: 'lLd3Je card-a',
+    parentElement: sharedWrapper,
+    querySelector(selector) {
+      if (selector === 'h3.QJPWVe') {
+        return { textContent: 'Card A Google Title' };
+      }
+      if (selector === 'div.EAcu5e.Gx4ovb') {
+        return { textContent: 'Google | San Francisco, CA, USA' };
+      }
+      if (selector === 'span.pwO9Dc:not(.vo5qdf)') {
+        return { textContent: 'San Francisco, CA, USA' };
+      }
+      if (selector === 'span.r0wTof') {
+        return { textContent: 'San Francisco, CA, USA' };
+      }
+      return null;
+    },
+  };
+  const siblingCardB = {
+    className: 'sMn82b card-b',
+    parentElement: sharedWrapper,
     querySelector(selector) {
       if (selector === 'h3.QJPWVe') {
         return { textContent: 'Software Engineering Manager, Geo, Duplex Agentic Platform' };
@@ -345,7 +389,7 @@ test('google cloud adapter walks to the real card root and normalizes title and 
         return { textContent: 'Google | Mountain View, CA, USA' };
       }
       if (selector === 'span.pwO9Dc:not(.vo5qdf)') {
-        return { textContent: 'Mountain View, CA, USA' };
+        return { textContent: 'place Mountain View, CA, USA' };
       }
       if (selector === 'span.r0wTof') {
         return { textContent: 'Mountain View, CA, USA' };
@@ -354,8 +398,11 @@ test('google cloud adapter walks to the real card root and normalizes title and 
     },
   };
   const shallowWrapper = {
-    parentElement: cardRoot,
-    querySelector() {
+    parentElement: siblingCardB,
+    querySelector(selector) {
+      if (selector === 'h3.QJPWVe') {
+        return { textContent: 'Card A Google Title' };
+      }
       return null;
     },
   };
