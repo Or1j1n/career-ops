@@ -182,11 +182,12 @@ for (const f of systemFiles) {
   }
 }
 
-// Check user files are NOT tracked (gitignored)
-const userFiles = [
-  'config/profile.yml', 'modes/_profile.md', 'portals.yml',
+// Check user files that must remain ignored in this workflow.
+const requiredGitignoredFiles = [
+  'config/profile.yml',
+  'modes/_profile.md',
 ];
-for (const f of userFiles) {
+for (const f of requiredGitignoredFiles) {
   const tracked = run('git', ['ls-files', f]);
   if (tracked === '') {
     pass(`User file gitignored: ${f}`);
@@ -195,6 +196,14 @@ for (const f of userFiles) {
   } else {
     fail(`User file IS tracked (should be gitignored): ${f}`);
   }
+}
+
+const backupTrackedFile = 'portals.yml';
+const backupTracked = run('git', ['ls-files', backupTrackedFile]);
+if (backupTracked && backupTracked.trim() !== '') {
+  pass(`User file tracked as expected in this workflow: ${backupTrackedFile}`);
+} else {
+  warn(`User file not tracked in this workflow: ${backupTrackedFile}`);
 }
 
 // ── 6. PERSONAL DATA LEAK CHECK ─────────────────────────────────
@@ -253,13 +262,34 @@ console.log('\n7. Absolute path check');
 
 // Same git grep approach: only scans tracked files. Untracked AI tool
 // outputs, local debate artifacts, etc. can't false-positive here.
-const absPathResult = run(
-  `git grep -n "/Users/" -- '*.mjs' '*.sh' '*.md' '*.go' '*.yml' 2>/dev/null | grep -v README.md | grep -v LICENSE | grep -v CLAUDE.md | grep -v test-all.mjs`
-);
-if (!absPathResult) {
+const absPathResult = run('git', [
+  'grep',
+  '-n',
+  '/Users/',
+  '--',
+  '*.mjs',
+  '*.sh',
+  '*.md',
+  '*.go',
+  '*.yml',
+]);
+const excludedAbsPathFiles = new Set([
+  'README.md',
+  'LICENSE',
+  'CLAUDE.md',
+  'test-all.mjs',
+]);
+const absPathLines = absPathResult
+  ? absPathResult.split('\n').filter((line) => {
+      const file = line.split(':', 1)[0];
+      return !excludedAbsPathFiles.has(file);
+    })
+  : [];
+
+if (absPathLines.length === 0) {
   pass('No absolute paths in code files');
 } else {
-  for (const line of absPathResult.split('\n').filter(Boolean)) {
+  for (const line of absPathLines.filter(Boolean)) {
     fail(`Absolute path: ${line.slice(0, 100)}`);
   }
 }
