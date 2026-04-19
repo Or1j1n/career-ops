@@ -160,6 +160,7 @@ tracked_companies:
 
   - name: Scaleway
     careers_url: https://www.scaleway.com/en/careers/
+    scan_method: playwright_generic
     notes: "Paris. Cloud souverain pour l'IA."
     enabled: true
 
