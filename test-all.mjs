@@ -41,32 +41,16 @@ function run(cmd, args = [], opts = {}) {
 
 function fileExists(path) { return existsSync(join(ROOT, path)); }
 function readFile(path) { return readFileSync(join(ROOT, path), 'utf-8'); }
-function collectSyntaxFiles(root, currentDir = root) {
-  const fullPath = join(ROOT, currentDir);
-  const files = [];
-  const entries = readdirSync(fullPath, { withFileTypes: true });
-  const orderedEntries = entries
-    .filter((entry) => entry.name !== 'node_modules')
-    .concat(entries.filter((entry) => entry.name === 'node_modules'));
-
-  for (const entry of orderedEntries) {
+function collectSyntaxFiles(dir) {
+  return readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((entry) => {
     if (entry.name === 'node_modules') return [];
 
-    const nextPath = currentDir === '.'
-      ? entry.name
-      : join(currentDir, entry.name);
-
-    if (entry.isDirectory()) {
-      files.push(...collectSyntaxFiles(root, nextPath));
-      continue;
-    }
-
-    if (entry.isFile() && entry.name.endsWith('.mjs')) {
-      files.push(relative(ROOT, join(ROOT, nextPath)));
-    }
-  }
-
-  return files;
+    const fullPath = join(ROOT, dir, entry.name);
+    if (entry.isDirectory()) return collectSyntaxFiles(join(dir, entry.name));
+    return entry.isFile() && entry.name.endsWith('.mjs')
+      ? [relative(ROOT, fullPath)]
+      : [];
+  });
 }
 
 console.log('\n🧪 career-ops test suite\n');
