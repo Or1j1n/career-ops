@@ -11,13 +11,21 @@ export async function scan(page, company) {
       'span[data-testid="location"]',
     ];
 
+    function normalizeLocation(value) {
+      const text = String(value || '').trim();
+      if (!text) return '';
+      if (/multiple locations/i.test(text)) return '';
+      if (/\+.*locations?/i.test(text)) return '';
+      return text;
+    }
+
     function getLocation(anchor) {
       const container = anchor.closest?.('article, li, div, section') || anchor.parentElement;
       if (!container) return '';
 
       for (const selector of locationSelectors) {
         const node = container.querySelector?.(selector);
-        const value = node?.textContent?.trim();
+        const value = normalizeLocation(node?.textContent);
         if (value) return value;
       }
 

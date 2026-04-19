@@ -7,18 +7,37 @@ export async function scan(page, company) {
 
   const offers = await page.locator('a[href*="jobs/results/"]').evaluateAll((anchors) => {
     const locationSelectors = [
-      '.r0wTof',
+      'div.EAcu5e.Gx4ovb',
+      'span.pwO9Dc:not(.vo5qdf)',
+      'span.r0wTof',
       '[data-testid="job-location"]',
       '[data-testid="location"]',
     ];
 
-    function getLocation(anchor) {
-      const container = anchor.closest?.('article, li, div, section') || anchor.parentElement;
-      if (!container) return '';
+    function findCardRoot(anchor) {
+      let node = anchor.parentElement;
 
+      while (node) {
+        if (node.querySelector?.('h3.QJPWVe')) {
+          return node;
+        }
+        node = node.parentElement;
+      }
+
+      return anchor.parentElement || anchor;
+    }
+
+    function normalizeLocation(value) {
+      const text = String(value || '').trim();
+      if (!text) return '';
+      const afterPipe = text.includes('|') ? text.split('|').pop() : text;
+      return afterPipe.replace(/^place\s*/i, '').trim();
+    }
+
+    function getLocation(cardRoot) {
       for (const selector of locationSelectors) {
-        const node = container.querySelector?.(selector);
-        const value = node?.textContent?.trim();
+        const node = cardRoot.querySelector?.(selector);
+        const value = normalizeLocation(node?.textContent);
         if (value) return value;
       }
 
@@ -30,8 +49,8 @@ export async function scan(page, company) {
         const href = anchor.getAttribute('href');
         if (!href || !href.includes('jobs/results/')) return null;
 
-        const container = anchor.closest?.('article, li, div, section') || anchor.parentElement || anchor;
-        const heading = container?.querySelector?.('h3.QJPWVe');
+        const cardRoot = findCardRoot(anchor);
+        const heading = cardRoot?.querySelector?.('h3.QJPWVe');
         const ariaLabel = anchor.getAttribute('aria-label') || '';
         const normalizedHref = /^https?:\/\//i.test(href) || href.startsWith('/') ? href : `/${href}`;
         const title = (
@@ -46,7 +65,7 @@ export async function scan(page, company) {
           title,
           url: new URL(normalizedHref, window.location.href).href,
           company: '',
-          location: getLocation(anchor),
+          location: getLocation(cardRoot),
         };
       })
       .filter(Boolean);

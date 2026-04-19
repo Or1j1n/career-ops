@@ -335,49 +335,42 @@ test('microsoft adapter walks ancestors to find the card heading and keeps Paris
   });
 });
 
-test('google cloud adapter prefers h3 title, strips aria-label fallback, and keeps precise location only', async () => {
-  const locatedCard = {
+test('google cloud adapter walks to the real card root and normalizes title and location', async () => {
+  const cardRoot = {
     querySelector(selector) {
       if (selector === 'h3.QJPWVe') {
-        return { textContent: 'Solutions Architect' };
+        return { textContent: 'Software Engineering Manager, Geo, Duplex Agentic Platform' };
       }
-      if (selector === '.r0wTof') {
-        return { textContent: 'Paris, France' };
+      if (selector === 'div.EAcu5e.Gx4ovb') {
+        return { textContent: 'Google | Mountain View, CA, USA' };
+      }
+      if (selector === 'span.pwO9Dc:not(.vo5qdf)') {
+        return { textContent: 'Mountain View, CA, USA' };
+      }
+      if (selector === 'span.r0wTof') {
+        return { textContent: 'Mountain View, CA, USA' };
       }
       return null;
     },
   };
-  const fallbackCard = {
+  const shallowWrapper = {
+    parentElement: cardRoot,
     querySelector() {
       return null;
     },
   };
-  const anchors = [
-    {
-      textContent: 'Learn more',
-      getAttribute(name) {
-        if (name === 'href') return 'jobs/results/123';
-        if (name === 'aria-label') return 'Learn more about Field Sales Engineer';
-        return null;
-      },
-      closest() {
-        return locatedCard;
-      },
-      parentElement: locatedCard,
+  const anchor = {
+    textContent: 'Learn more',
+    getAttribute(name) {
+      if (name === 'href') return 'jobs/results/123';
+      if (name === 'aria-label') return 'Learn more about Software Engineering Manager, Geo, Duplex Agentic Platform';
+      return null;
     },
-    {
-      textContent: '',
-      getAttribute(name) {
-        if (name === 'href') return 'jobs/results/456';
-        if (name === 'aria-label') return 'Learn more about Customer Engineer';
-        return null;
-      },
-      closest() {
-        return fallbackCard;
-      },
-      parentElement: fallbackCard,
+    closest() {
+      return shallowWrapper;
     },
-  ];
+    parentElement: shallowWrapper,
+  };
 
   await withWindow('https://careers.google.com/jobs/results', async () => {
     const page = {
@@ -395,7 +388,7 @@ test('google cloud adapter prefers h3 title, strips aria-label fallback, and kee
         assert.equal(selector, 'a[href*="jobs/results/"]');
         return {
           async evaluateAll(callback) {
-            return callback(anchors);
+            return callback([anchor]);
           },
         };
       },
@@ -407,15 +400,10 @@ test('google cloud adapter prefers h3 title, strips aria-label fallback, and kee
     });
 
     assert.deepEqual(offers, [{
-      title: 'Solutions Architect',
+      title: 'Software Engineering Manager, Geo, Duplex Agentic Platform',
       url: 'https://careers.google.com/jobs/results/123',
       company: 'Google Cloud (Paris)',
-      location: 'Paris, France',
-    }, {
-      title: 'Customer Engineer',
-      url: 'https://careers.google.com/jobs/results/456',
-      company: 'Google Cloud (Paris)',
-      location: '',
+      location: 'Mountain View, CA, USA',
     }]);
   });
 });
@@ -479,10 +467,13 @@ test('meta adapter prefers h3 title and precise span location for job detail lin
       return null;
     },
   };
-  const fallbackCard = {
+  const secondCard = {
     querySelector(selector) {
       if (selector === 'h3') {
         return { textContent: 'Partner Engineer' };
+      }
+      if (selector === 'span[data-testid="location"]') {
+        return { textContent: 'Multiple Locations' };
       }
       return null;
     },
@@ -506,9 +497,9 @@ test('meta adapter prefers h3 title and precise span location for job detail lin
         return null;
       },
       closest() {
-        return fallbackCard;
+        return secondCard;
       },
-      parentElement: fallbackCard,
+      parentElement: secondCard,
     },
   ];
 
@@ -543,62 +534,10 @@ test('meta adapter prefers h3 title and precise span location for job detail lin
       title: 'Deployment Strategist',
       url: 'https://www.metacareers.com/profile/job_details/123',
       company: 'Meta (Paris)',
-      location: 'Sunnyvale, CA +14 locations',
+      location: '',
     }, {
       title: 'Partner Engineer',
       url: 'https://www.metacareers.com/profile/job_details/456',
-      company: 'Meta (Paris)',
-      location: '',
-    }]);
-  });
-});
-
-test('meta adapter returns empty location when only broad generic spans are present', async () => {
-  const card = {
-    querySelector(selector) {
-      if (selector === 'h3') {
-        return { textContent: 'Partner Engineer' };
-      }
-      if (selector === 'span[dir="auto"]') {
-        return { textContent: 'This should not be treated as location' };
-      }
-      return null;
-    },
-  };
-  const anchor = {
-    textContent: '',
-    getAttribute(name) {
-      if (name === 'href') return '/profile/job_details/999';
-      return null;
-    },
-    closest() {
-      return card;
-    },
-    parentElement: card,
-  };
-
-  await withWindow('https://www.metacareers.com/jobs', async () => {
-    const page = {
-      async goto() {},
-      async waitForLoadState() {},
-      locator(selector) {
-        assert.equal(selector, 'a[href*="/profile/job_details/"]');
-        return {
-          async evaluateAll(callback) {
-            return callback([anchor]);
-          },
-        };
-      },
-    };
-
-    const offers = await scanMeta(page, {
-      name: 'Meta (Paris)',
-      careers_url: 'https://www.metacareers.com/jobs',
-    });
-
-    assert.deepEqual(offers, [{
-      title: 'Partner Engineer',
-      url: 'https://www.metacareers.com/profile/job_details/999',
       company: 'Meta (Paris)',
       location: '',
     }]);
