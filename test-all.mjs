@@ -13,7 +13,7 @@
 
 import { execSync, execFileSync } from 'child_process';
 import { readFileSync, existsSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, relative } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -41,6 +41,33 @@ function run(cmd, args = [], opts = {}) {
 
 function fileExists(path) { return existsSync(join(ROOT, path)); }
 function readFile(path) { return readFileSync(join(ROOT, path), 'utf-8'); }
+function collectSyntaxFiles(root, currentDir = root) {
+  const fullPath = join(ROOT, currentDir);
+  const files = [];
+  const entries = readdirSync(fullPath, { withFileTypes: true });
+  const orderedEntries = entries
+    .filter((entry) => entry.name !== 'node_modules')
+    .concat(entries.filter((entry) => entry.name === 'node_modules'));
+
+  for (const entry of orderedEntries) {
+    if (entry.name === 'node_modules') return [];
+
+    const nextPath = currentDir === '.'
+      ? entry.name
+      : join(currentDir, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...collectSyntaxFiles(root, nextPath));
+      continue;
+    }
+
+    if (entry.isFile() && entry.name.endsWith('.mjs')) {
+      files.push(relative(ROOT, join(ROOT, nextPath)));
+    }
+  }
+
+  return files;
+}
 
 console.log('\n🧪 career-ops test suite\n');
 
@@ -48,8 +75,10 @@ console.log('\n🧪 career-ops test suite\n');
 
 console.log('1. Syntax checks');
 
-const mjsFiles = readdirSync(ROOT).filter(f => f.endsWith('.mjs'));
-for (const f of mjsFiles) {
+const syntaxRoots = ['.', 'scan-lib', 'adapters', 'tests'];
+const syntaxFiles = [...new Set(syntaxRoots.flatMap(root => collectSyntaxFiles(root)))];
+
+for (const f of syntaxFiles) {
   const result = run('node', ['--check', f]);
   if (result !== null) {
     pass(`${f} syntax OK`);
