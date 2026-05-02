@@ -180,10 +180,18 @@ Each URL gets a verdict: `active`, `expired`, or `uncertain` with a reason.
 
 ## scan
 
-Zero-token portal scanner. Hits ATS APIs (Greenhouse, Ashby, Lever) and career pages directly — no LLM tokens consumed. Reads `portals.yml` for target companies and search queries, outputs matching listings to stdout and optionally appends to `data/pipeline.md`.
+Zero-token portal scanner. Reads `portals.yml`, scans enabled `tracked_companies`, filters by title and location, deduplicates against scan history, pipeline, and tracker, then prints matches and optionally appends them to `data/pipeline.md`.
+
+The script currently supports:
+- ATS APIs auto-detected from Greenhouse, Ashby, and Lever URLs
+- `scan_method: playwright_generic` for career pages without a supported API
+- `scan_method: playwright_custom` with adapters in `adapters/*.mjs`
+- `scan_method: websearch` as an explicit deferred method; the script logs it but does not run web search itself
 
 ```bash
 npm run scan
+npm run scan -- --dry-run
+npm run scan -- --company Mistral
 ```
 
 **Exit codes:** `0` scan completed, `1` configuration error or no portals.yml found.

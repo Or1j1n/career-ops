@@ -2,7 +2,7 @@
 
 Escanea portales de empleo configurados, filtra por relevancia de título, y añade nuevas ofertas al pipeline para evaluación posterior.
 
-> **Nota (v1.5+):** El escáner por defecto (`scan.mjs` / `npm run scan`) es **zero-token** y sólo consulta directamente las APIs públicas de Greenhouse, Ashby y Lever. Los niveles con Playwright/WebSearch descritos abajo son el flujo **agente** (ejecutado por Claude/Codex), no lo que hace `scan.mjs`. Si una empresa no tiene API Greenhouse/Ashby/Lever, `scan.mjs` la ignorará; para esos casos, el agente debe completar manualmente el Nivel 1 (Playwright) o Nivel 3 (WebSearch).
+> **Nota sobre `scan.mjs` / `npm run scan`:** El escáner por defecto es **zero-token**: usa APIs públicas cuando puede y Playwright local cuando `portals.yml` lo pide. No consume LLM tokens. Soporta Greenhouse, Ashby y Lever por API; `playwright_generic`; y `playwright_custom` con adapters en `adapters/*.mjs`. Los `search_queries` y `scan_method: websearch` quedan como flujo de agente: el script los registra como diferidos, pero no ejecuta WebSearch por sí solo.
 
 ## Ejecución recomendada
 
@@ -22,6 +22,9 @@ Leer `portals.yml` que contiene:
 - `search_queries`: Lista de queries WebSearch con `site:` filters por portal (descubrimiento amplio)
 - `tracked_companies`: Empresas específicas con `careers_url` para navegación directa
 - `title_filter`: Keywords positive/negative/seniority_boost para filtrado de títulos
+- `location_filter`: Reglas geográficas aplicadas por `scan.mjs`
+- `scan_method`: Opcional. `playwright_generic`, `playwright_custom` o `websearch`
+- `scan_adapter`: Requerido cuando `scan_method: playwright_custom`
 
 ## Estrategia de descubrimiento (3 niveles)
 
@@ -59,10 +62,15 @@ Para empresas con API pública o feed estructurado, usar la respuesta JSON/XML c
 
 Los `search_queries` con `site:` filters cubren portales de forma transversal (todos los Ashby, todos los Greenhouse, etc.). Útil para descubrir empresas NUEVAS que aún no están en `tracked_companies`, pero los resultados pueden estar desfasados.
 
-**Prioridad de ejecución:**
-1. Nivel 1: Playwright → todas las `tracked_companies` con `careers_url`
-2. Nivel 2: API → todas las `tracked_companies` con `api:`
-3. Nivel 3: WebSearch → todos los `search_queries` con `enabled: true`
+**Prioridad de ejecución del script zero-token:**
+1. API si `detectApi()` reconoce Greenhouse, Ashby o Lever, o si `api:` apunta a Greenhouse.
+2. Playwright si `scan_method` es `playwright_generic` o `playwright_custom`.
+3. Diferido si `scan_method` es `websearch` u otro método explícito no soportado por el script.
+
+**Prioridad de ejecución del flujo agente completo:**
+1. API/Playwright via `npm run scan -- --dry-run` para el descubrimiento zero-token.
+2. WebSearch para empresas o queries diferidas.
+3. Verificación Playwright de los resultados WebSearch antes de añadirlos al pipeline.
 
 Los niveles son aditivos — se ejecutan todos, los resultados se mezclan y deduplicar.
 

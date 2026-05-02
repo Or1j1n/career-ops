@@ -1,10 +1,10 @@
 # Portal Scanner Configuration
 # Used by /career-ops scan to discover new offers automatically.
 #
-# Strategy (3 levels):
-#   1. Playwright → careers_url of each company (real-time, reliable)
-#   2. Greenhouse API → structured JSON (fast, Greenhouse-only)
-#   3. WebSearch with site: filters (broad discovery, may be stale)
+# Strategy:
+#   1. scan.mjs uses ATS APIs when it can detect Greenhouse, Ashby, or Lever
+#   2. scan.mjs uses Playwright when scan_method is playwright_generic/custom
+#   3. scan_method: websearch and search_queries are deferred to the agent flow
 #
 # IMPORTANT: Each company in tracked_companies MUST have careers_url.
 #   Prefer the BRANDED company careers URL whenever available; use ATS-hosted URL only as fallback.
@@ -17,7 +17,7 @@
 #   1. Copy this file to portals.yml in the project root
 #   2. Edit title_filter.positive with YOUR target role keywords
 #   3. Add/remove companies in tracked_companies
-#   4. Adjust search_queries for your preferred job boards
+#   4. Adjust search_queries for agent-assisted WebSearch discovery
 #   5. Set enabled: false on companies you don't care about
 
 # -- Location filter --
@@ -112,8 +112,8 @@ title_filter:
     - "Director"
 
 # -- Search queries --
-# Each query triggers a WebSearch. Use site: to filter by portal.
-# The scanner extracts title, URL, and company from results.
+# These queries are for the agent-assisted discovery flow. scan.mjs does not
+# run WebSearch itself; it logs explicit websearch targets as deferred.
 
 search_queries:
   # -- Ashby --
@@ -291,7 +291,11 @@ search_queries:
 
 # -- Tracked companies --
 # Companies whose career pages are checked directly.
-# scan_method: playwright (default), websearch, greenhouse_api
+# scan_method options:
+#   - omit it: scan.mjs auto-detects Greenhouse/Ashby/Lever APIs, otherwise falls back to playwright_generic
+#   - playwright_generic: scan a page with generic link extraction
+#   - playwright_custom: use adapters/{scan_adapter}.mjs
+#   - websearch: defer to the agent/WebSearch flow
 # For Greenhouse companies, add api: field for faster structured JSON access.
 
 tracked_companies:

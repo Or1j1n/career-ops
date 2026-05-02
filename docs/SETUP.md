@@ -25,6 +25,8 @@ cp config/profile.example.yml config/profile.yml
 
 Edit `config/profile.yml` with your personal details: name, email, target roles, narrative, proof points.
 
+Optional but recommended: add a `language` section if your analysis language differs from the language of CVs or application answers. Example: internal analysis in French, candidate-facing documents in the job posting language, English by default when ambiguous.
+
 ### 3. Add your CV
 
 Create `cv.md` in the project root with your full CV in markdown format. This is the source of truth for all evaluations and PDFs.
@@ -39,8 +41,10 @@ cp templates/portals.example.yml portals.yml
 
 Edit `portals.yml`:
 - Update `title_filter.positive` with keywords matching your target roles
+- Update `location_filter` with the markets you actually want to scan
 - Add companies you want to track in `tracked_companies`
-- Customize `search_queries` for your preferred job boards
+- Customize `search_queries` for agent-assisted WebSearch discovery
+- Use `scan_method: playwright_generic` or `scan_method: playwright_custom` for company pages without a supported ATS API
 
 ### 5. Start using
 

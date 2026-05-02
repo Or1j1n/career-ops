@@ -24,7 +24,7 @@
      │                    Output Pipeline                      │
      │  ┌──────────┐  ┌────────────┐  ┌───────────────────┐  │
      │  │ Report.md│  │  PDF (HTML  │  │ Tracker TSV       │  │
-     │  │ (A-F eval)│  │  → Puppeteer)│  │ (merge-tracker)  │  │
+     │  │ (A-H eval)│  │  → Chromium) │  │ (merge-tracker)  │  │
      │  └──────────┘  └────────────┘  └───────────────────┘  │
      └────────────────────────────────────────────────────────┘
                                │
@@ -39,13 +39,15 @@
 1. **Input**: User pastes JD text or URL
 2. **Extract**: Playwright/WebFetch extracts JD from URL
 3. **Classify**: Detect archetype (1 of 6 types)
-4. **Evaluate**: 6 blocks (A-F):
+4. **Evaluate**: structured blocks (A-H in the full evaluation mode):
    - A: Role summary
    - B: CV match (gaps + mitigation)
    - C: Level strategy
    - D: Comp research (WebSearch)
    - E: CV personalization plan
    - F: Interview prep (STAR stories)
+   - G: Posting legitimacy / liveness
+   - H: Draft application answers when the score qualifies
 5. **Score**: Weighted average across 10 dimensions (1-5)
 6. **Report**: Save as `reports/{num}-{company}-{date}.md`
 7. **PDF**: Generate ATS-optimized CV (`generate-pdf.mjs`)
@@ -76,6 +78,7 @@ The orchestrator manages parallelism, state, retries, and resume.
 cv.md                    →  Evaluation context
 article-digest.md        →  Proof points for matching
 config/profile.yml       →  Candidate identity
+modes/_profile.md        →  User-specific archetypes, narrative, language and writing rules
 portals.yml              →  Scanner configuration
 templates/states.yml     →  Canonical status values
 templates/cv-template.html → PDF generation template
@@ -103,7 +106,7 @@ Scripts maintain data consistency:
 
 The `dashboard/` directory contains a standalone Go TUI application that visualizes the pipeline:
 
-- Filter tabs: All, Evaluada, Aplicado, Entrevista, Top >=4, No Aplicar
+- Filter tabs: All, Evaluated, Applied, Interview, Top >=4, SKIP, Rejected, Discarded
 - Sort modes: Score, Date, Company, Status
 - Grouped/flat view
 - Lazy-loaded report previews

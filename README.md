@@ -238,7 +238,8 @@ career-ops/
 ├── config/
 │   └── profile.example.yml      # Template for your profile
 ├── modes/                       # 14 skill modes
-│   ├── _shared.md               # Shared context (customize this)
+│   ├── _shared.md               # Shared system context (auto-updatable)
+│   ├── _profile.md              # Your local overrides (create/customize this)
 │   ├── oferta.md                # Single evaluation
 │   ├── pdf.md                   # PDF generation
 │   ├── scan.md                  # Portal scanner
@@ -269,8 +270,8 @@ career-ops/
 ![Bubble Tea](https://img.shields.io/badge/Bubble_Tea-FF75B5?style=flat&logo=go&logoColor=white)
 
 - **Agent**: Claude Code with custom skills and modes
-- **PDF**: Playwright/Puppeteer + HTML template
-- **Scanner**: Playwright + Greenhouse API + WebSearch
+- **PDF**: Playwright Chromium + HTML template
+- **Scanner**: ATS APIs + optional Playwright page extraction + deferred WebSearch
 - **Dashboard**: Go + Bubble Tea + Lipgloss (Catppuccin Mocha theme)
 - **Data**: Markdown tables + YAML config + TSV batch files
 
