@@ -588,6 +588,60 @@ test('google cloud adapter uses aria-label when no h3 is present', async () => {
   });
 });
 
+test('google cloud adapter preserves canonical Google Careers URLs from anchor.href', async () => {
+  const card = {
+    querySelector(selector) {
+      if (selector === 'h3.QJPWVe') {
+        return { textContent: 'Forward Deployed Engineer, GenAI, Google Cloud' };
+      }
+      if (selector === 'div.EAcu5e.Gx4ovb') {
+        return { textContent: 'Google | Paris, France' };
+      }
+      return null;
+    },
+  };
+  const anchor = {
+    href: 'https://www.google.com/about/careers/applications/jobs/results/84885680978567878-forward-deployed-engineer-genai-google-cloud?hl=en&jlo=en-US&location=Paris%2C%20France',
+    textContent: 'Learn more',
+    getAttribute(name) {
+      if (name === 'href') return 'jobs/results/84885680978567878-forward-deployed-engineer-genai-google-cloud?hl=en&jlo=en-US&location=Paris%2C%20France';
+      if (name === 'aria-label') return 'Learn more about Forward Deployed Engineer, GenAI, Google Cloud';
+      return null;
+    },
+    closest() {
+      return card;
+    },
+    parentElement: card,
+  };
+
+  await withWindow('https://www.google.com/about/careers/applications/jobs/results/?hl=en&jlo=en-US&location=Paris%2C%20France', async () => {
+    const page = {
+      async goto() {},
+      async waitForLoadState() {},
+      locator(selector) {
+        assert.equal(selector, 'a[href*="jobs/results/"]');
+        return {
+          async evaluateAll(callback) {
+            return callback([anchor]);
+          },
+        };
+      },
+    };
+
+    const offers = await scanGoogleCloud(page, {
+      name: 'Google Cloud (Paris)',
+      careers_url: 'https://www.google.com/about/careers/applications/jobs/results/?hl=en&jlo=en-US&location=Paris%2C%20France',
+    });
+
+    assert.deepEqual(offers, [{
+      title: 'Forward Deployed Engineer, GenAI, Google Cloud',
+      url: 'https://www.google.com/about/careers/applications/jobs/results/84885680978567878-forward-deployed-engineer-genai-google-cloud?hl=en&jlo=en-US&location=Paris%2C%20France',
+      company: 'Google Cloud (Paris)',
+      location: 'Paris, France',
+    }]);
+  });
+});
+
 test('meta adapter extracts location from the nearest job container without losing the anchor title', async () => {
   const listItem = {
     querySelector(selector) {
@@ -665,6 +719,10 @@ test('portals.yml defines a strict IDF location filter and V1 companies', () => 
   assert.equal(Array.isArray(config.location_filter), true);
   assert.equal(config.location_filter.includes('paris'), true);
   assert.equal(config.location_filter.includes('hauts-de-seine'), true);
+  assert.match(
+    config.tracked_companies.find((company) => company.name === 'Google Cloud (Paris)')?.careers_url || '',
+    /location=Paris/i,
+  );
 
   const companyNames = new Set(
     (config.tracked_companies || []).map((company) => company.name),

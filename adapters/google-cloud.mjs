@@ -59,6 +59,21 @@ export async function scan(page, company) {
       return '';
     }
 
+    function resolveJobUrl(anchor, href) {
+      if (anchor.href) return anchor.href;
+      if (/^https?:\/\//i.test(href) || href.startsWith('/')) {
+        return new URL(href, window.location.href).href;
+      }
+      if (href.startsWith('jobs/results/')) {
+        const current = new URL(window.location.href);
+        const prefix = current.pathname.includes('/about/careers/applications/jobs/results')
+          ? '/about/careers/applications/jobs/results/'
+          : '/jobs/results/';
+        return new URL(`${prefix}${href.slice('jobs/results/'.length)}`, current.origin).href;
+      }
+      return new URL(href, window.location.href).href;
+    }
+
     return anchors
       .map((anchor) => {
         const href = anchor.getAttribute('href');
@@ -67,7 +82,7 @@ export async function scan(page, company) {
         const cardRoot = findCardRoot(anchor);
         const heading = cardRoot?.querySelector?.('h3.QJPWVe');
         const ariaLabel = anchor.getAttribute('aria-label') || '';
-        const normalizedHref = /^https?:\/\//i.test(href) || href.startsWith('/') ? href : `/${href}`;
+        const url = resolveJobUrl(anchor, href);
         const title = (
           heading?.textContent?.trim() ||
           ariaLabel.replace(/^Learn more about\s*/i, '').trim() ||
@@ -78,7 +93,7 @@ export async function scan(page, company) {
 
         return {
           title,
-          url: new URL(normalizedHref, window.location.href).href,
+          url,
           company: '',
           location: getLocation(cardRoot),
         };

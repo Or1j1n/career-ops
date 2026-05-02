@@ -208,7 +208,7 @@ tracked_companies:
     enabled: true
 
   - name: Google Cloud (Paris)
-    careers_url: https://www.google.com/about/careers/applications/jobs/results
+    careers_url: https://www.google.com/about/careers/applications/jobs/results/?hl=en&jlo=en-US&location=Paris%2C%20France
     scan_method: playwright_custom
     scan_adapter: google-cloud
     enabled: true
