@@ -97,7 +97,7 @@ tracked_companies:
     enabled: true
 
   - name: H (Holistic AI)
-    careers_url: https://jobs.lever.co/h-company
+    careers_url: https://jobs.ashbyhq.com/hcompany
     notes: "Paris. Agents d'action. 200M$ levés."
     enabled: true
 
@@ -137,8 +137,7 @@ tracked_companies:
     enabled: true
 
   - name: Alan
-    careers_url: https://job-boards.greenhouse.io/alan
-    api: https://boards-api.greenhouse.io/v1/boards/alan/jobs
+    careers_url: https://jobs.ashbyhq.com/alan
     notes: "Paris. Assurance santé avec très forte culture IA."
     enabled: true
 
@@ -148,7 +147,8 @@ tracked_companies:
     enabled: true
 
   - name: Giskard
-    careers_url: https://jobs.lever.co/giskard
+    careers_url: https://www.welcometothejungle.com/en/companies/giskard/jobs
+    scan_method: playwright_generic
     notes: "Paris. Qualité et sécurité des LLM."
     enabled: true
 
