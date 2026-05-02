@@ -39,6 +39,7 @@ modes/_profile.md
 
 # Generated
 .resolved-prompt-*
+.playwright-mcp/
 node_modules/
 bun.lock
 dashboard/*.exe

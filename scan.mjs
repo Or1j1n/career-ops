@@ -17,7 +17,7 @@
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
-import { loadScanConfig, buildTitleFilter, buildLocationFilter, resolveScanMethod } from './scan-lib/config.mjs';
+import { loadScanConfig, buildCompanyTitleFilter, buildLocationFilter, resolveScanMethod } from './scan-lib/config.mjs';
 import {
   applyScanWrites,
   getPlaywrightConcurrency,
@@ -226,7 +226,6 @@ async function main() {
   // 1. Read portals.yml
   const config = loadScanConfig(PORTALS_PATH);
   const companies = config.tracked_companies || [];
-  const titleFilter = buildTitleFilter(config.title_filter);
   const locationFilter = buildLocationFilter(config.location_filter);
 
   // 2. Filter to enabled companies and resolve scan methods
@@ -290,6 +289,7 @@ async function main() {
   const apiTasks = apiTargets.map(company => async () => {
     const { type, url } = company._api;
     try {
+      const titleFilter = buildCompanyTitleFilter(config.title_filter, company.title_filter);
       const json = await fetchJson(url);
       const jobs = PARSERS[type](json, company.name);
       totalFound += jobs.length;
@@ -328,6 +328,7 @@ async function main() {
     await withBrowser(async (browser) => {
       const playwrightTasks = playwrightTargets.map(company => async () => {
         try {
+          const titleFilter = buildCompanyTitleFilter(config.title_filter, company.title_filter);
           const jobs = await runPlaywrightTarget(browser, company);
           totalFound += jobs.length;
 

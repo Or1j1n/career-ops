@@ -211,6 +211,11 @@ tracked_companies:
     careers_url: https://www.google.com/about/careers/applications/jobs/results/?hl=en&jlo=en-US&location=Paris%2C%20France
     scan_method: playwright_custom
     scan_adapter: google-cloud
+    title_filter:
+      positive:
+        - "AI Consultant"
+        - "AI Engineer"
+        - "Google Cloud Consulting"
     enabled: true
 
   - name: Salesforce (Paris)

@@ -33,9 +33,23 @@ export function loadScanConfig(path = 'portals.yml') {
   return config;
 }
 
-export function buildTitleFilter(titleFilter) {
-  const positive = (titleFilter?.positive || []).map((k) => k.toLowerCase());
-  const negative = (titleFilter?.negative || []).map((k) => k.toLowerCase());
+function mergeTitleFilter(baseTitleFilter, companyTitleFilter) {
+  return {
+    positive: [
+      ...(baseTitleFilter?.positive || []),
+      ...(companyTitleFilter?.positive || []),
+    ],
+    negative: [
+      ...(baseTitleFilter?.negative || []),
+      ...(companyTitleFilter?.negative || []),
+    ],
+  };
+}
+
+export function buildCompanyTitleFilter(baseTitleFilter, companyTitleFilter) {
+  const merged = mergeTitleFilter(baseTitleFilter, companyTitleFilter);
+  const positive = merged.positive.map((k) => k.toLowerCase());
+  const negative = merged.negative.map((k) => k.toLowerCase());
 
   return (title) => {
     const lower = String(title || '').toLowerCase();
@@ -43,6 +57,10 @@ export function buildTitleFilter(titleFilter) {
     const hasNegative = negative.some((k) => lower.includes(k));
     return hasPositive && !hasNegative;
   };
+}
+
+export function buildTitleFilter(titleFilter) {
+  return buildCompanyTitleFilter(titleFilter);
 }
 
 export function buildLocationFilter(allowedLocations) {

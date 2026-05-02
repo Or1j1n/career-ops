@@ -35,6 +35,17 @@ Copy from `templates/portals.example.yml` and customize:
 4. **search_queries**: WebSearch queries for job boards (used by the agent flow, not by the zero-token script)
 5. **tracked_companies**: Companies to check directly. Use `scan_method: playwright_generic` or `scan_method: playwright_custom` + `scan_adapter` for pages that do not expose an ATS API.
 
+Vous pouvez aussi ajouter un `title_filter` propre a une entreprise sous une entree `tracked_companies`. Ses mots-cles `positive` et `negative` sont fusionnes avec le filtre global. C'est utile pour des intitules pertinents chez une entreprise precise, mais trop larges pour tout le scan:
+
+```yaml
+- name: Example Cloud
+  careers_url: https://example.com/careers
+  title_filter:
+    positive:
+      - "AI Consultant"
+      - "AI Engineer"
+```
+
 ## CV Template (templates/cv-template.html)
 
 The HTML template uses these design tokens:

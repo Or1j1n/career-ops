@@ -7,6 +7,7 @@ import path from 'node:path';
 import {
   loadScanConfig,
   buildLocationFilter,
+  buildCompanyTitleFilter,
   resolveScanMethod,
 } from '../scan-lib/config.mjs';
 import { detectApi } from '../scan-lib/api.mjs';
@@ -117,6 +118,25 @@ test('buildLocationFilter accepts strict IDF labels and rejects broad fallback l
   assert.equal(isAllowed('Paris, Texas, United States'), false);
   assert.equal(isAllowed('Paris, TX'), false);
   assert.equal(isAllowed(''), false);
+});
+
+test('buildCompanyTitleFilter extends global title keywords per company without weakening negatives', () => {
+  const globalTitleFilter = {
+    positive: ['Forward Deployed', 'Customer Engineer'],
+    negative: ['Intern'],
+  };
+  const companyTitleFilter = {
+    positive: ['AI Consultant', 'AI Engineer', 'Google Cloud Consulting'],
+  };
+
+  const globalOnly = buildCompanyTitleFilter(globalTitleFilter);
+  const googleOnly = buildCompanyTitleFilter(globalTitleFilter, companyTitleFilter);
+
+  assert.equal(globalOnly('AI Consultant, Google Cloud Consulting (French, English)'), false);
+  assert.equal(googleOnly('AI Consultant, Google Cloud Consulting (French, English)'), true);
+  assert.equal(googleOnly('AI Engineer, Google Cloud Consulting (English, French)'), true);
+  assert.equal(googleOnly('Forward Deployed Engineer, GenAI, Google Cloud'), true);
+  assert.equal(googleOnly('AI Consultant Intern, Google Cloud Consulting'), false);
 });
 
 test('resolveScanMethod prefers explicit playwright_custom and ATS detection', () => {
@@ -722,6 +742,10 @@ test('portals.yml defines a strict IDF location filter and V1 companies', () => 
   assert.match(
     config.tracked_companies.find((company) => company.name === 'Google Cloud (Paris)')?.careers_url || '',
     /location=Paris/i,
+  );
+  assert.deepEqual(
+    config.tracked_companies.find((company) => company.name === 'Google Cloud (Paris)')?.title_filter?.positive,
+    ['AI Consultant', 'AI Engineer', 'Google Cloud Consulting'],
   );
 
   const companyNames = new Set(
