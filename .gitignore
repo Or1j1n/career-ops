@@ -1,9 +1,13 @@
 # Personal data (user fills these)
 cv.md
+cv.*.md
 data/applications.md
 data/pipeline.md
 data/scan-history.tsv
 data/*.bak
+data/*.docx
+data/*.xml
+data/*.txt
 reports/*.md
 !reports/.gitkeep
 output/*
@@ -14,6 +18,8 @@ batch/batch-state.tsv
 batch/batch-input.tsv
 batch/tracker-additions/**/*.tsv
 !batch/tracker-additions/.gitkeep
+interview-prep/*.md
+!interview-prep/.gitkeep
 jds/*
 !jds/.gitkeep
 
@@ -35,6 +41,16 @@ modes/_profile.md
 .resolved-prompt-*
 node_modules/
 bun.lock
+dashboard/*.exe
+dashboard/career-dashboard
+saturday-scan.ps1
+
+# Local one-off scanner/research helpers
+fetch-jds.mjs
+find-openai-url.js
+get-evaluated.mjs
+get-jobs.mjs
+get-urls.mjs
 
 # OS
 .DS_Store

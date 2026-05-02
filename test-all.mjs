@@ -97,7 +97,18 @@ for (const { name, allowFail } of scripts) {
 
 // ── 3. LIVENESS CLASSIFICATION ──────────────────────────────────
 
-console.log('\n3. Liveness classification');
+console.log('\n3. Scan unit tests');
+
+const scanTests = run('node', ['--test', 'tests/scan.test.mjs'], { timeout: 120000 });
+if (scanTests !== null) {
+  pass('Scan unit tests pass');
+} else {
+  fail('Scan unit tests failed');
+}
+
+// ── 4. LIVENESS CLASSIFICATION ──────────────────────────────────
+
+console.log('\n4. Liveness classification');
 
 try {
   const { classifyLiveness } = await import(pathToFileURL(join(ROOT, 'liveness-core.mjs')).href);
@@ -150,10 +161,10 @@ try {
   fail(`Liveness classification tests crashed: ${e.message}`);
 }
 
-// ── 4. DASHBOARD BUILD ──────────────────────────────────────────
+// ── 5. DASHBOARD BUILD ──────────────────────────────────────────
 
 if (!QUICK) {
-  console.log('\n4. Dashboard build');
+  console.log('\n5. Dashboard build');
   const goBuild = run('cd dashboard && go build -o /tmp/career-dashboard-test . 2>&1');
   if (goBuild !== null) {
     pass('Dashboard compiles');
@@ -161,12 +172,12 @@ if (!QUICK) {
     fail('Dashboard build failed');
   }
 } else {
-  console.log('\n4. Dashboard build (skipped --quick)');
+  console.log('\n5. Dashboard build (skipped --quick)');
 }
 
-// ── 5. DATA CONTRACT ────────────────────────────────────────────
+// ── 6. DATA CONTRACT ────────────────────────────────────────────
 
-console.log('\n5. Data contract validation');
+console.log('\n6. Data contract validation');
 
 // Check system files exist
 const systemFiles = [
@@ -209,9 +220,32 @@ if (backupTracked && backupTracked.trim() !== '') {
   warn(`User file not tracked in this workflow: ${backupTrackedFile}`);
 }
 
-// ── 6. PERSONAL DATA LEAK CHECK ─────────────────────────────────
+// ── 7. PERSONAL DATA LEAK CHECK ─────────────────────────────────
 
-console.log('\n6. Personal data leak check');
+console.log('\n7. Personal data leak check');
+
+const forbiddenTrackedPatterns = [
+  /^cv\.md$/,
+  /^cv\..*\.md$/,
+  /^data\/.*\.(docx|xml|txt)$/i,
+  /^dashboard\/.*(\.exe|career-dashboard)$/i,
+  /^saturday-scan\.ps1$/i,
+  /^interview-prep\/.*\.md$/i,
+  /^batch\/tracker-additions\/.*\.tsv$/i,
+];
+
+const trackedFiles = (run('git', ['ls-files']) || '').split('\n').filter(Boolean);
+const forbiddenTrackedFiles = trackedFiles.filter((file) =>
+  forbiddenTrackedPatterns.some((pattern) => pattern.test(file)),
+);
+
+if (forbiddenTrackedFiles.length === 0) {
+  pass('No personal/generated artifacts are tracked');
+} else {
+  for (const file of forbiddenTrackedFiles) {
+    fail(`Personal/generated artifact is tracked: ${file}`);
+  }
+}
 
 const leakPatterns = [
   'Santiago', 'santifer.io', 'Santifer iRepair', 'Zinkee', 'ALMAS',
@@ -259,9 +293,9 @@ if (!leakFound) {
   pass('No personal data leaks outside allowed files');
 }
 
-// ── 7. ABSOLUTE PATH CHECK ──────────────────────────────────────
+// ── 8. ABSOLUTE PATH CHECK ──────────────────────────────────────
 
-console.log('\n7. Absolute path check');
+console.log('\n8. Absolute path check');
 
 // Same git grep approach: only scans tracked files. Untracked AI tool
 // outputs, local debate artifacts, etc. can't false-positive here.
@@ -297,9 +331,9 @@ if (absPathLines.length === 0) {
   }
 }
 
-// ── 8. MODE FILE INTEGRITY ──────────────────────────────────────
+// ── 9. MODE FILE INTEGRITY ──────────────────────────────────────
 
-console.log('\n8. Mode file integrity');
+console.log('\n9. Mode file integrity');
 
 const expectedModes = [
   '_shared.md', '_profile.template.md', 'oferta.md', 'pdf.md', 'scan.md',
@@ -323,9 +357,9 @@ if (shared.includes('_profile.md')) {
   fail('_shared.md does NOT reference _profile.md');
 }
 
-// ── 9. CLAUDE.md INTEGRITY ──────────────────────────────────────
+// ── 10. CLAUDE.md INTEGRITY ──────────────────────────────────────
 
-console.log('\n9. CLAUDE.md integrity');
+console.log('\n10. CLAUDE.md integrity');
 
 const claude = readFile('CLAUDE.md');
 const requiredSections = [
@@ -342,9 +376,9 @@ for (const section of requiredSections) {
   }
 }
 
-// ── 10. VERSION FILE ─────────────────────────────────────────────
+// ── 11. VERSION FILE ─────────────────────────────────────────────
 
-console.log('\n10. Version file');
+console.log('\n11. Version file');
 
 if (fileExists('VERSION')) {
   const version = readFile('VERSION').trim();

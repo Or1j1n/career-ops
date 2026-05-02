@@ -30,13 +30,17 @@ export async function scan(page, company) {
       return '';
     }
 
+    function findCardRoot(anchor) {
+      return anchor.closest?.('div[role="listitem"], li, article') || anchor.parentElement || anchor;
+    }
+
     return anchors
       .map((anchor) => {
         const href = anchor.getAttribute('href');
         if (!href || !href.includes('/profile/job_details/')) return null;
 
-        const cardRoot = anchor;
-        const heading = cardRoot.querySelector?.('h3');
+        const cardRoot = findCardRoot(anchor);
+        const heading = anchor.querySelector?.('h3') || cardRoot.querySelector?.('h3');
         const title = (
           heading?.textContent?.trim() ||
           anchor.getAttribute('aria-label') ||

@@ -6,6 +6,13 @@ export async function scan(page, company) {
   await page.waitForLoadState('networkidle').catch(() => {});
 
   const offers = await page.locator('a').evaluateAll((anchors) => {
+    const locationSelectors = [
+      '[data-testid*="location" i]',
+      '[aria-label*="location" i]',
+      '[class*="location" i]',
+      '[class*="Location"]',
+    ];
+
     function getClassName(node) {
       return String(node?.className || node?.getAttribute?.('class') || '');
     }
@@ -24,6 +31,24 @@ export async function scan(page, company) {
       }
 
       return anchor.parentElement || anchor;
+    }
+
+    function normalizeLocation(value) {
+      const text = String(value || '').trim();
+      if (!text) return '';
+      if (/multiple locations/i.test(text)) return '';
+      if (/\+\s*\d+\s+(more|locations?)/i.test(text)) return '';
+      return text;
+    }
+
+    function getLocation(cardRoot) {
+      for (const selector of locationSelectors) {
+        const node = cardRoot?.querySelector?.(selector);
+        const value = normalizeLocation(node?.textContent || node?.getAttribute?.('aria-label'));
+        if (value) return value;
+      }
+
+      return '';
     }
 
     return anchors
@@ -45,7 +70,7 @@ export async function scan(page, company) {
           title,
           url: new URL(href, window.location.href).href,
           company: '',
-          location: 'Paris',
+          location: getLocation(cardRoot),
         };
       })
       .filter(Boolean);

@@ -30,6 +30,7 @@ location_filter:
   - "remote"
   - "idf"
   - "ile-de-france"
+  - "ile de france"
 
 # -- Title filter --
 # The scanner uses these keywords to decide if a title is relevant.

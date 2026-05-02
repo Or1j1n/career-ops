@@ -5,6 +5,7 @@ location_filter:
   - "paris"
   - "ile-de-france"
   - "île-de-france"
+  - "ile de france"
   - "idf"
   - "grand paris"
   - "greater paris"

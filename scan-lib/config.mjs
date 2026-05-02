@@ -9,6 +9,10 @@ function normalizeText(value) {
   return String(value)
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[-_/']/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
     .toLowerCase();
 }
 
@@ -48,9 +52,12 @@ export function buildLocationFilter(allowedLocations) {
   }
 
   return (location) => {
-    if (!location || location.trim() === '') return true;
+    if (!location || location.trim() === '') return false;
     const normalized = normalizeText(location);
-    return allowed.some((label) => normalized.includes(label));
+    if (/\b(texas|tx|united states|usa)\b/.test(normalized)) return false;
+
+    const padded = ` ${normalized} `;
+    return allowed.some((label) => padded.includes(` ${label} `));
   };
 }
 

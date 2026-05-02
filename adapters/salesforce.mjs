@@ -6,6 +6,34 @@ export async function scan(page, company) {
   await page.waitForLoadState('networkidle').catch(() => {});
 
   const offers = await page.locator('a[href*="job"]').evaluateAll((anchors) => {
+    const locationSelectors = [
+      '[data-testid*="location" i]',
+      '[aria-label*="location" i]',
+      '[class*="location" i]',
+      '[class*="Location"]',
+    ];
+
+    function normalizeLocation(value) {
+      const text = String(value || '').trim();
+      if (!text) return '';
+      if (/multiple locations/i.test(text)) return '';
+      if (/\+\s*\d+\s+(more|locations?)/i.test(text)) return '';
+      return text;
+    }
+
+    function getLocation(anchor) {
+      const cardRoot = anchor.closest?.('article, li, tr, section, div') || anchor.parentElement;
+      if (!cardRoot) return '';
+
+      for (const selector of locationSelectors) {
+        const node = cardRoot.querySelector?.(selector);
+        const value = normalizeLocation(node?.textContent || node?.getAttribute?.('aria-label'));
+        if (value) return value;
+      }
+
+      return '';
+    }
+
     return anchors
       .map((anchor) => {
         const href = anchor.getAttribute('href');
@@ -23,7 +51,7 @@ export async function scan(page, company) {
           title,
           url: new URL(href, window.location.href).href,
           company: '',
-          location: 'Paris',
+          location: getLocation(anchor),
         };
       })
       .filter(Boolean);

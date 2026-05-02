@@ -95,6 +95,7 @@ test('buildLocationFilter accepts strict IDF labels and rejects broad fallback l
   const isAllowed = buildLocationFilter([
     'Paris',
     'Ile-de-France',
+    'Ile de France',
     'Hauts-de-Seine',
     'Seine-Saint-Denis',
     'Val-de-Marne',
@@ -107,12 +108,15 @@ test('buildLocationFilter accepts strict IDF labels and rejects broad fallback l
 
   assert.equal(isAllowed('Paris'), true);
   assert.equal(isAllowed('Ile-de-France'), true);
+  assert.equal(isAllowed('Ile de France'), true);
   assert.equal(isAllowed('Hauts-de-Seine'), true);
   assert.equal(isAllowed('La Defense'), true);
   assert.equal(isAllowed('Remote - EMEA'), false);
   assert.equal(isAllowed('France'), false);
   assert.equal(isAllowed('Lyon'), false);
-  assert.equal(isAllowed(''), true);
+  assert.equal(isAllowed('Paris, Texas, United States'), false);
+  assert.equal(isAllowed('Paris, TX'), false);
+  assert.equal(isAllowed(''), false);
 });
 
 test('resolveScanMethod prefers explicit playwright_custom and ATS detection', () => {
@@ -250,6 +254,15 @@ test('loadCustomAdapter rejects clearly when scan_adapter is missing', async () 
   );
 });
 
+test('loadCustomAdapter rejects unsafe adapter names before dynamic import', async () => {
+  for (const adapterName of ['../microsoft', '..\\microsoft', 'microsoft.js', 'bad adapter']) {
+    await assert.rejects(
+      () => loadCustomAdapter(adapterName),
+      /invalid scan_adapter/i,
+    );
+  }
+});
+
 test('custom adapters load for big tech priority companies', async () => {
   const adapters = await Promise.all([
     loadCustomAdapter('microsoft'),
@@ -261,6 +274,21 @@ test('custom adapters load for big tech priority companies', async () => {
 
   for (const adapter of adapters) {
     assert.equal(typeof adapter, 'function');
+  }
+});
+
+test('custom adapters do not hardcode Paris as a location', () => {
+  for (const adapterPath of [
+    'adapters/aws.mjs',
+    'adapters/microsoft.mjs',
+    'adapters/salesforce.mjs',
+  ]) {
+    const source = fs.readFileSync(adapterPath, 'utf8');
+    assert.equal(
+      /location:\s*['"]Paris['"]/.test(source),
+      false,
+      `${adapterPath} must extract real locations instead of hardcoding Paris`,
+    );
   }
 });
 
@@ -290,6 +318,9 @@ test('microsoft adapter uses the nearest Microsoft card root and ignores sibling
     querySelector(selector) {
       if (selector === 'h3.careers-joblistResponsive-subheading') {
         return { textContent: 'Card B Title' };
+      }
+      if (selector === '[class*="location" i]') {
+        return { textContent: 'Paris, France' };
       }
       return null;
     },
@@ -346,7 +377,7 @@ test('microsoft adapter uses the nearest Microsoft card root and ignores sibling
       title: 'Card B Title',
       url: 'https://careers.microsoft.com/job/123',
       company: 'Microsoft (Paris)',
-      location: 'Paris',
+      location: 'Paris, France',
     }]);
   });
 });
@@ -557,14 +588,14 @@ test('google cloud adapter uses aria-label when no h3 is present', async () => {
   });
 });
 
-test('meta adapter prefers anchor h3 title and keeps location lookup on the same anchor root', async () => {
-  const contaminatedWrapper = {
+test('meta adapter extracts location from the nearest job container without losing the anchor title', async () => {
+  const listItem = {
     querySelector(selector) {
       if (selector === 'h3') {
-        return { textContent: 'Shared Wrapper Title' };
+        return { textContent: 'Shared Container Title' };
       }
       if (selector === 'span[data-testid="job-location"]') {
-        return { textContent: 'Menlo Park, CA' };
+        return { textContent: 'Paris, France' };
       }
       return null;
     },
@@ -585,10 +616,11 @@ test('meta adapter prefers anchor h3 title and keeps location lookup on the same
       if (name === 'aria-label') return 'Shared Wrapper Title';
       return null;
     },
-    closest() {
-      return contaminatedWrapper;
+    closest(selector) {
+      if (selector === 'div[role="listitem"], li, article') return listItem;
+      return null;
     },
-    parentElement: contaminatedWrapper,
+    parentElement: listItem,
   };
 
   await withWindow('https://www.metacareers.com/jobs', async () => {
@@ -622,7 +654,7 @@ test('meta adapter prefers anchor h3 title and keeps location lookup on the same
       title: 'Deployment Strategist',
       url: 'https://www.metacareers.com/profile/job_details/123',
       company: 'Meta (Paris)',
-      location: '',
+      location: 'Paris, France',
     }]);
   });
 });
@@ -832,32 +864,22 @@ test('runPlaywrightTarget generic path returns offers and closes the page', asyn
 
 test('runPlaywrightTarget dispatches a custom adapter function', async () => {
   const trace = [];
-  const adapterDir = fs.mkdtempSync(path.join(process.cwd(), 'adapters', '__test-'));
-  const adapterName = `${path.basename(adapterDir)}/probe`;
-  const adapterPath = path.join(adapterDir, 'probe.mjs');
-
-  fs.writeFileSync(adapterPath, `
-export async function scan(page, company) {
-  globalThis.__customAdapterTrace.push(['scan', company.name]);
-  return [{
-    title: 'Custom Probe',
-    url: 'https://example.com/custom',
-    company: company.name,
-    location: 'Paris',
-  }];
-}
-`);
-
   const page = {
-    async goto() {
-      trace.push('goto');
+    async goto(url) {
+      trace.push(['goto', url]);
     },
-    locator() {
-      trace.push('locator');
+    async waitForLoadState() {},
+    locator(selector) {
+      trace.push(['locator', selector]);
       return {
-        async evaluateAll() {
-          trace.push('evaluateAll');
-          return [];
+        async evaluateAll(callback) {
+          return callback([{
+            textContent: 'Custom Probe',
+            getAttribute(name) {
+              if (name === 'href') return '/jobs/custom';
+              return null;
+            },
+          }]);
         },
       };
     },
@@ -872,25 +894,23 @@ export async function scan(page, company) {
     },
   };
 
-  try {
-    globalThis.__customAdapterTrace = trace;
+  const offers = await withWindow('https://example.com/careers', async () => runPlaywrightTarget(browser, {
+    name: 'Probe',
+    careers_url: 'https://example.com/careers',
+    scan_method: 'playwright_custom',
+    scan_adapter: 'salesforce',
+  }));
 
-    const offers = await runPlaywrightTarget(browser, {
-      name: 'Probe',
-      careers_url: 'https://example.com/careers',
-      scan_method: 'playwright_custom',
-      scan_adapter: adapterName,
-    });
-
-    assert.deepEqual(offers, [{
-      title: 'Custom Probe',
-      url: 'https://example.com/custom',
-      company: 'Probe',
-      location: 'Paris',
-    }]);
-    assert.deepEqual(trace, ['newPage', ['scan', 'Probe'], 'close']);
-  } finally {
-    delete globalThis.__customAdapterTrace;
-    fs.rmSync(adapterDir, { recursive: true, force: true });
-  }
+  assert.deepEqual(offers, [{
+    title: 'Custom Probe',
+    url: 'https://example.com/jobs/custom',
+    company: 'Probe',
+    location: '',
+  }]);
+  assert.deepEqual(trace, [
+    'newPage',
+    ['goto', 'https://example.com/careers'],
+    ['locator', 'a[href*="job"]'],
+    'close',
+  ]);
 });

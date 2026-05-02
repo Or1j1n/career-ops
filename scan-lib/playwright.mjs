@@ -10,6 +10,9 @@ export async function loadCustomAdapter(adapterName) {
   if (!adapterName) {
     throw new Error('Missing scan_adapter for playwright_custom target');
   }
+  if (!/^[a-z0-9-]+$/i.test(adapterName)) {
+    throw new Error(`Invalid scan_adapter "${adapterName}". Use only letters, numbers, and hyphens.`);
+  }
 
   try {
     const mod = await import(new URL(`../adapters/${adapterName}.mjs`, import.meta.url));
