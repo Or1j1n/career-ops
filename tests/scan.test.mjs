@@ -155,14 +155,16 @@ test('resolveScanMethod keeps explicit websearch deferred instead of implicit', 
   });
 });
 
-test('resolveScanMethod keeps OpenAI and Salesforce on explicit deferred websearch', () => {
+test('resolveScanMethod scans OpenAI through Ashby and keeps Salesforce deferred', () => {
   const config = loadScanConfig('portals.yml');
   const byName = new Map((config.tracked_companies || []).map((company) => [company.name, company]));
 
   assert.deepEqual(resolveScanMethod(byName.get('OpenAI (Paris)')), {
-    type: 'deferred',
-    method: 'websearch',
-    explicit: true,
+    type: 'api',
+    api: {
+      type: 'ashby',
+      url: 'https://api.ashbyhq.com/posting-api/job-board/openai?includeCompensation=true',
+    },
   });
 
   assert.deepEqual(resolveScanMethod(byName.get('Salesforce (Paris)')), {

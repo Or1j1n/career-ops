@@ -120,6 +120,21 @@ function loadSeenUrls() {
   return seen;
 }
 
+function normalizeRoleKeyPart(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/&/g, ' and ')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function companyRoleKey(company, role) {
+  return `${normalizeRoleKeyPart(company)}::${normalizeRoleKeyPart(role)}`;
+}
+
 function loadSeenCompanyRoles() {
   const seen = new Set();
   if (existsSync(APPLICATIONS_PATH)) {
@@ -129,7 +144,7 @@ function loadSeenCompanyRoles() {
       const company = match[1].trim().toLowerCase();
       const role = match[2].trim().toLowerCase();
       if (company && role && company !== 'company') {
-        seen.add(`${company}::${role}`);
+        seen.add(companyRoleKey(company, role));
       }
     }
   }
@@ -292,7 +307,7 @@ async function main() {
           totalDupes++;
           continue;
         }
-        const key = `${job.company.toLowerCase()}::${job.title.toLowerCase()}`;
+        const key = companyRoleKey(job.company, job.title);
         if (seenCompanyRoles.has(key)) {
           totalDupes++;
           continue;
@@ -329,7 +344,7 @@ async function main() {
               totalDupes++;
               continue;
             }
-            const key = `${job.company.toLowerCase()}::${job.title.toLowerCase()}`;
+            const key = companyRoleKey(job.company, job.title);
             if (seenCompanyRoles.has(key)) {
               totalDupes++;
               continue;

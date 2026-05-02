@@ -167,9 +167,8 @@ tracked_companies:
   # -- US AI Giants with Paris Offices --
 
   - name: OpenAI (Paris)
-    careers_url: https://openai.com/careers
-    scan_method: websearch
-    scan_query: 'site:openai.com/careers Paris (solutions OR deployment OR engineer)'
+    careers_url: https://jobs.ashbyhq.com/openai
+    notes: "Paris. Official OpenAI Ashby board; branded careers page: https://openai.com/careers"
     enabled: true
 
   - name: Anthropic (Paris)
