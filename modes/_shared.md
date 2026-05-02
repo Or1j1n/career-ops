@@ -216,27 +216,24 @@ _Extracted from writing-samples/ on {date}. Re-run if new samples are added._
 
 These rules apply to ALL generated text that ends up in candidate-facing documents: PDF summaries, bullets, cover letters, form answers, LinkedIn messages. They do NOT apply to internal evaluation reports.
 
-### Writing style
-
-Write plainly and naturally. Use clear, direct sentences. Default to sentences and paragraphs. Use lists or headings only when they clearly help.
-
-Vary sentence length naturally. Avoid a flat, repetitive rhythm.
-
-Keep the tone calm, specific, and matter of fact. State uncertainty plainly. Do not overstate importance.
-
-### Punctuation and formatting
-
-Do not use semicolons, hashtags, emojis, asterisks for emphasis, or dashes as punctuation. Use commas, parentheses, or separate sentences instead. Do not bold or italic key terms inside prose. Do not use the pattern "Bold term: definition sentence."
-
-### Words to avoid
-
-Do not use: passionate about, results-oriented, proven track record, leveraged, spearheaded, facilitated, synergies, robust, seamless, cutting-edge, innovative, in today's fast-paced world, demonstrated ability to, best practices, delve, intricate, tapestry, pivotal, underscore, landscape, foster, testament, enhance, crucial, multifaceted, groundbreaking, transformative, cornerstone, realm, nuanced, holistic, streamline.
-
-Use these words only if they are the precise technical term needed, not for general emphasis or flair.
-
-### Specifics over abstractions
-
-"Cut p95 latency from 2.1s to 380ms" beats "improved performance." Name tools, projects, and clients when allowed. Do not use vague attributions without naming a source. Do not repeat points, force rhetorical contrasts, or add formulaic summaries.
+### Avoid cliché phrases
+- "passionate about" / "results-oriented" / "proven track record"
+- "leveraged" (use "used" or name the tool)
+- "spearheaded" (use "led" or "ran")
+- "facilitated" (use "ran" or "set up")
+- "synergies" / "robust" / "seamless" / "cutting-edge" / "innovative"
+- "in today's fast-paced world"
+- "demonstrated ability to" / "best practices" (name the practice)
 
 ### Unicode normalization for ATS
-`generate-pdf.mjs` automatically normalizes em-dashes, smart quotes, and zero-width characters to ASCII equivalents for maximum ATS compatibility. Avoid generating them in the first place.
+`generate-pdf.mjs` automatically normalizes em-dashes, smart quotes, and zero-width characters to ASCII equivalents for maximum ATS compatibility. But avoid generating them in the first place.
+
+### Vary sentence structure
+- Don't start every bullet with the same verb
+- Mix sentence lengths (short. Then longer with context. Short again.)
+- Don't always use "X, Y, and Z" — sometimes two items, sometimes four
+
+### Prefer specifics over abstractions
+- "Cut p95 latency from 2.1s to 380ms" beats "improved performance"
+- "Postgres + pgvector for retrieval over 12k docs" beats "designed scalable RAG architecture"
+- Name tools, projects, and customers when allowed
